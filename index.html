@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام فودافون للتحصيل المطور</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+<header>
+  <span>📱 نظام فودافون للتحصيل المطور</span>
+  <span id="headerMonth" class="header-month"></span>
+</header>
+
+<div class="container">
+  <!-- شاشة البحث والتحصيل -->
+  <div id="tab-search">
+    <div class="card">
+      <h3>🔍 البحث والتحصيل</h3>
+      <div class="filter-row">
+        <input type="month" id="searchMonth" onchange="search.applyFilters()">
+        <input type="text" id="searchInput" placeholder="ابحث بالاسم أو الرقم" oninput="search.applyFilters()">
+      </div>
+      <div class="filter-tabs">
+        <button class="ftab active" onclick="search.setFilter('all',this)">الكل</button>
+        <button class="ftab" onclick="search.setFilter('unpaid',this)">لم يدفع</button>
+        <button class="ftab" onclick="search.setFilter('partial',this)">جزئي</button>
+        <button class="ftab" onclick="search.setFilter('paid',this)">مدفوع</button>
+        <button class="ftab" onclick="search.setFilter('prepaid',this)">مقدم</button>
+      </div>
+      <div id="searchResults"></div>
+    </div>
+  </div>
+
+  <!-- شاشة الخطوط المفوترة -->
+  <div id="tab-lines" class="hidden">
+    <div class="card">
+      <h3>📋 الخطوط المفوترة</h3>
+      <div class="filter-row">
+        <input type="month" id="invoiceMonth" onchange="invoices.load()">
+        <select id="invoiceFilter" onchange="invoices.applyFilter()">
+          <option value="all">الكل</option>
+          <option value="unpaid">غير مدفوع</option>
+          <option value="partial">جزئي</option>
+          <option value="paid">مدفوع</option>
+        </select>
+      </div>
+      <div id="payAllBar" class="hidden">
+        <button class="btn-success w100" onclick="invoices.payAll()">💰 دفع جميع الخطوط دفعة واحدة</button>
+      </div>
+    </div>
+    <div id="invoicesList"></div>
+  </div>
+
+  <!-- شاشة رفع الفواتير -->
+  <div id="tab-upload" class="hidden">
+    <div class="card">
+      <h3>📤 رفع الفواتير</h3>
+      <input type="month" id="uploadMonth">
+      <label class="label-sm">خيار الرفع</label>
+      <div class="radio-group">
+        <label><input type="radio" name="uploadMode" value="cumulative" checked> تراكمي (جمع المبالغ)</label>
+        <label><input type="radio" name="uploadMode" value="skip"> تخطي المسجل مسبقاً</label>
+      </div>
+      <input type="file" id="invoiceFiles" multiple accept=".xlsx,.xls">
+      <button class="btn-primary w100 mt8" onclick="upload.processInvoices()">📂 رفع الفواتير</button>
+      <div id="uploadStatus"></div>
+    </div>
+  </div>
+
+  <!-- شاشة بيانات الخطوط -->
+  <div id="tab-clients" class="hidden">
+    <div class="card">
+      <h3>👥 بيانات الخطوط</h3>
+      <div class="filter-row">
+        <input type="text" id="clientSearch" placeholder="بحث في الخطوط..." oninput="clients.applySearch()">
+      </div>
+      <div class="flex gap8">
+        <button class="btn-primary flex1" onclick="clients.openForm()">➕ إضافة خط</button>
+        <button class="btn-secondary flex1" onclick="clients.openImport()">📥 استيراد Excel</button>
+      </div>
+    </div>
+
+    <!-- نموذج الإضافة/التعديل -->
+    <div id="clientFormCard" class="card hidden">
+      <h3 id="clientFormTitle">➕ إضافة خط جديد</h3>
+      <input type="hidden" id="editClientPhone">
+      <input type="text" id="clientName" placeholder="الاسم الكامل">
+      <input type="text" id="clientPhone" placeholder="رقم الخط (بدون صفر)">
+      <select id="clientPackage"></select>
+      <input type="number" id="clientPrice" placeholder="السعر الشهري">
+      <div class="flex gap8 mt8">
+        <button class="btn-primary flex1" onclick="clients.save()">💾 حفظ</button>
+        <button class="btn-outline flex1" onclick="clients.closeForm()">إلغاء</button>
+      </div>
+    </div>
+
+    <!-- استيراد Excel -->
+    <div id="clientImportCard" class="card hidden">
+      <h3>📥 استيراد من Excel جهات الاتصال</h3>
+      <p class="hint">ملف Excel يحتوي أعمدة: رقم الخط، الاسم، الباقة، السعر</p>
+      <input type="file" id="clientsExcel" accept=".xlsx,.xls">
+      <div class="flex gap8 mt8">
+        <button class="btn-primary flex1" onclick="clients.importExcel()">📂 استيراد</button>
+        <button class="btn-outline flex1" onclick="clients.closeImport()">إلغاء</button>
+      </div>
+      <div id="importStatus"></div>
+    </div>
+
+    <div class="card table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>الاسم</th>
+            <th>الرقم</th>
+            <th>الباقة</th>
+            <th>السعر</th>
+            <th>إجراء</th>
+          </tr>
+        </thead>
+        <tbody id="clientsTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- شاشة أسعار الباقات -->
+  <div id="tab-packages" class="hidden">
+    <div class="card">
+      <h3>💳 أسعار الباقات</h3>
+      <button class="btn-secondary w100 mb8" onclick="pkgs.openAdd()">➕ إضافة باقة جديدة</button>
+      <div id="addPackageForm" class="hidden">
+        <input type="text" id="newPackageName" placeholder="اسم الباقة">
+        <input type="number" id="newPackagePrice" placeholder="السعر">
+        <div class="flex gap8 mt8">
+          <button class="btn-primary flex1" onclick="pkgs.addNew()">حفظ</button>
+          <button class="btn-outline flex1" onclick="pkgs.closeAdd()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+    <div id="packagesList"></div>
+  </div>
+</div>
+
+<!-- Tab Bar -->
+<div class="tabbar">
+  <button class="active" onclick="showTab('search',this)" data-tab="search">🔍<br><span>بحث</span></button>
+  <button onclick="showTab('lines',this)" data-tab="lines">📋<br><span>الفواتير</span></button>
+  <button onclick="showTab('upload',this)" data-tab="upload">📤<br><span>رفع</span></button>
+  <button onclick="showTab('clients',this)" data-tab="clients">👥<br><span>الخطوط</span></button>
+  <button onclick="showTab('packages',this)" data-tab="packages">💳<br><span>الباقات</span></button>
+</div>
+
+<!-- Modal for payment -->
+<div id="payModal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3 id="payModalTitle">تسجيل دفعة</h3>
+    <p id="payModalInfo" class="hint"></p>
+    <input type="number" id="payAmount" placeholder="المبلغ المدفوع" step="0.01">
+    <div class="flex gap8 mt8">
+      <button class="btn-primary flex1" onclick="modal.confirm()">✅ تأكيد</button>
+      <button class="btn-outline flex1" onclick="modal.close()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Delete Modal -->
+<div id="deleteModal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3>⚠️ تأكيد الحذف</h3>
+    <p id="deleteModalText"></p>
+    <div class="flex gap8 mt8">
+      <button class="btn-danger flex1" onclick="deleteModal.confirm()">🗑️ حذف</button>
+      <button class="btn-outline flex1" onclick="deleteModal.close()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="js/config.js"></script>
+<script src="js/firebase-db.js"></script>
+<script src="js/app.js"></script>
+<script src="js/search.js"></script>
+<script src="js/invoices.js"></script>
+<script src="js/upload.js"></script>
+<script src="js/clients.js"></script>
+<script src="js/packages.js"></script>
+</body>
+</html>
