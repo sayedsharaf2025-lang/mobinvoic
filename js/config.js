@@ -1,60 +1,48 @@
-// ─── Firebase Configuration ───────────────────────────────────────
-const firebaseConfig = {
-  apiKey: "AIzaSyBfFRxvmhg8aqtuDgXAOofFGpVPklUF-gs",
-  authDomain: "mobile-invoic-118d4.firebaseapp.com",
-  projectId: "mobile-invoic-118d4",
-  databaseURL: "https://mobile-invoic-118d4-default-rtdb.firebaseio.com/",
-  storageBucket: "mobile-invoic-118d4.firebasestorage.app",
-  messagingSenderId: "795305971254",
-  appId: "1:795305971254:web:7e8e874cfd805d33ec1297"
+// ═══════════════════════════════════════════
+// إعدادات وثوابت نظام فودافون
+// ═══════════════════════════════════════════
+
+const CONFIG = {
+    // إعدادات Firebase
+    FIREBASE_URL: "https://mobile-invoic-default-rtdb.firebaseio.com/",
+    
+    // إعدادات التخزين المحلي
+    STORAGE_KEYS: {
+        BACKUPS: "vodafone_system_backups",
+        SETTINGS: "vodafone_system_settings",
+        LAST_BACKUP: "vodafone_last_backup"
+    },
+    
+    // إعدادات النسخ الاحتياطي
+    BACKUP: {
+        AUTO_INTERVAL: 24 * 60 * 60 * 1000, // 24 ساعة
+        MAX_LOCAL_BACKUPS: 20,
+        INITIAL_DELAY: 10000 // 10 ثواني
+    },
+    
+    // إعدادات الباقات المعروفة للمقارنة
+    PACKAGES: {
+        "FlexRevamp": { minPrice: 60, maxPrice: 100, name: "Flex Revamp" },
+        "BusinessFlex": { minPrice: 110, maxPrice: 200, name: "Business Flex" },
+        "BusinessFlex+": { minPrice: 160, maxPrice: 250, name: "Business Flex+" },
+        "FreeSPOCFlex": { minPrice: 0, maxPrice: 20, name: "Free SPOC Flex" },
+        "غير معروف": { minPrice: 0, maxPrice: 999, name: "غير معروف" }
+    },
+    
+    // إعدادات الواجهة
+    UI: {
+        TOAST_DURATION: 3000,
+        ANIMATION_DURATION: 300
+    }
 };
 
-// ─── Package List ──────────────────────────────────────────────────
-const PACKAGE_LIST = [
-  "Flex 45 Revamp",
-  "Flex 52 Revamp",
-  "Flex 60 Revamp",
-  "Flex 90 Revamp",
-  "Flex 125 Revamp",
-  "2022 Business Flex 65",
-  "2025 Business Flex 70",
-  "2025 Business Flex 100",
-  "2025 Business Flex 150",
-  "Free SPOC Flex45"
-];
-
-// ─── Global State ──────────────────────────────────────────────────
-const STATE = {
-  clients: {},
-  invoices: {},
-  packagePrices: {}
+// حالة التطبيق العامة
+const APP_STATE = {
+    currentTab: 'alerts',
+    currentFilter: 'all',
+    currentMonthData: [],
+    isDarkMode: false,
+    autoBackupEnabled: true,
+    autoBackupTimer: null,
+    isOnline: navigator.onLine
 };
-
-// ─── Current Month Helper ──────────────────────────────────────────
-function getCurrentMonth() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-}
-
-// ─── Format Month ──────────────────────────────────────────────────
-function formatMonth(m) {
-  if (!m) return '';
-  const [y, mo] = m.split('-');
-  const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو',
-                  'يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-  return `${months[parseInt(mo) - 1]} ${y}`;
-}
-
-// ─── Normalize phone (remove leading 0) ───────────────────────────
-function normalizePhone(p) {
-  return String(p || '').replace(/^0+/, '').trim();
-}
-
-// ─── Toast ─────────────────────────────────────────────────────────
-function showToast(msg, type = 'default') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = `toast ${type}`;
-  t.classList.remove('hidden');
-  setTimeout(() => t.classList.add('hidden'), 3000);
-}
