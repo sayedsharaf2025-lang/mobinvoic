@@ -201,6 +201,70 @@ const App = {
         
         return warnings;
     },
+    // ═══════════════════════════════════════
+// 🗑️ حذف فاتورة شهر كامل
+// ═══════════════════════════════════════
+
+async deleteMonth(monthKey) {
+    if (!monthKey) {
+        UI.showToast('⚠️ اختر الشهر الأول', 'warning');
+        return;
+    }
+    
+    if (!this.data.months[monthKey]) {
+        UI.showToast('⚠️ هذا الشهر غير موجود', 'warning');
+        return;
+    }
+    
+    const lineCount = this.data.months[monthKey].length;
+    
+    if (confirm(`⚠️ هل أنت متأكد من حذف فاتورة شهر ${monthKey}؟\n\nعدد الخطوط: ${lineCount}\n\nلا يمكن التراجع عن هذا الإجراء!`)) {
+        // نسخ احتياطي قبل الحذف
+        const backup = Backup.create('pre_delete');
+        Backup.saveLocally(backup);
+        
+        // حذف من السحابة
+        await Firebase.request(`/months/${monthKey}`, 'DELETE');
+        
+        // حذف من الذاكرة
+        delete this.data.months[monthKey];
+        
+        // تحديث الواجهة
+        UI.renderLines();
+        UI.renderStats();
+        UI.generateAlerts();
+        
+        UI.showToast(`🗑️ تم حذف فاتورة شهر ${monthKey} بنجاح`);
+    }
+},
+
+/**
+ * حذف جميع الفواتير (كل الشهور)
+ */
+async deleteAllMonths() {
+    const monthsCount = Object.keys(this.data.months).length;
+    const totalLines = Object.values(this.data.months).reduce((sum, m) => sum + m.length, 0);
+    
+    if (confirm(`⚠️⚠️ تحذير خطير ⚠️⚠️\n\nحذف جميع الفواتير:\nعدد الشهور: ${monthsCount}\nإجمالي الخطوط: ${totalLines}\n\nلا يمكن التراجع! متأكد؟`)) {
+        // نسخ احتياطي قبل الحذف
+        const backup = Backup.create('pre_delete_all');
+        Backup.saveLocally(backup);
+        
+        // حذف من السحابة
+        await Firebase.request('/months', 'PUT', {});
+        
+        // حذف من الذاكرة
+        this.data.months = {};
+        APP_STATE.currentMonthData = [];
+        
+        // تحديث الواجهة
+        UI.renderLines();
+        UI.renderStats();
+        UI.generateAlerts();
+        
+        UI.showToast('🗑️ تم حذف جميع الفواتير بنجاح');
+    }
+}
     
     // ═══════════════════════════════════════
     // 📊 استيراد الأسماء من Excel
