@@ -260,9 +260,11 @@ const UI = {
         if (APP_STATE.currentFilter === 'unpaid') data = data.filter(d => d.status === 'unpaid');
         if (APP_STATE.currentFilter === 'partially') data = data.filter(d => d.status === 'partially');
         
+        const lineCards = document.getElementById('lineCards');
+        const desktopTable = document.getElementById('desktopTable');
         if (!data.length) {
-            document.getElementById('lineCards').innerHTML = '<div class="alert-item info">لا توجد أرقام</div>';
-            document.getElementById('desktopTable').innerHTML = '';
+            if (lineCards) lineCards.innerHTML = '<div class="alert-item info">لا توجد أرقام</div>';
+            if (desktopTable) desktopTable.innerHTML = '';
             return;
         }
         
@@ -297,7 +299,7 @@ const UI = {
                     </div>
                 </div>`;
         });
-        document.getElementById('lineCards').innerHTML = cardsHtml;
+        if (lineCards) lineCards.innerHTML = cardsHtml;
         
         let tableHtml = `<table class="d-table"><tr><th>الاسم</th><th>الرقم</th><th>الباقة</th><th>سعرك</th><th>فاتورة</th><th>مدفوع</th><th>متبقي</th><th>حالة</th><th>إجراء</th></tr>`;
         data.forEach(d => {
@@ -317,7 +319,7 @@ const UI = {
                 </div></td>
             </tr>`;
         });
-        document.getElementById('desktopTable').innerHTML = tableHtml + '</table>';
+        if (desktopTable) desktopTable.innerHTML = tableHtml + '</table>';
     },
     
     renderStats() {
@@ -583,7 +585,9 @@ const UI = {
     cancelAllPaymentsConfirm() {
         if (confirm('⚠️ إلغاء جميع المدفوعات لهذا الشهر؟')) {
             APP_STATE.currentMonthData.forEach(d => { d.status = 'unpaid'; d.paidAmount = 0; });
-            const monthKey = document.getElementById('monthPicker').value;
+            const monthPicker = document.getElementById('monthPicker');
+            if (!monthPicker) return;
+            const monthKey = monthPicker.value;
             App.data.months[monthKey] = APP_STATE.currentMonthData;
             Firebase.saveMonth(monthKey, APP_STATE.currentMonthData);
             this.renderLines(); this.renderStats(); this.generateAlerts();
