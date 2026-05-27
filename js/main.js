@@ -273,6 +273,67 @@ const App = {
             UI.showToast('🗑️ تم حذف جميع الفواتير بنجاح');
         }
     },
+
+    // ═══════════════════════════════════════
+    // 🎯 حذف خط معين من الشهر
+    // ═══════════════════════════════════════
+    async deleteLineFromMonth(phone) {
+        const monthPicker = document.getElementById('monthPicker');
+        if (!monthPicker) return;
+        const monthKey = monthPicker.value;
+        if (!this.data.months[monthKey]) return;
+        
+        const line = this.data.months[monthKey].find(d => d.phone === phone);
+        if (!line) {
+            UI.showToast('⚠️ الخط غير موجود في هذا الشهر', 'warning');
+            return;
+        }
+        
+        if (!confirm(`⚠️ حذف الخط ${line.name} (0${phone}) من شهر ${monthKey}؟`)) return;
+        
+        this.data.months[monthKey] = this.data.months[monthKey].filter(d => d.phone !== phone);
+        APP_STATE.currentMonthData = this.data.months[monthKey];
+        
+        await Firebase.saveMonth(monthKey, this.data.months[monthKey]);
+        UI.renderLines();
+        UI.renderStats();
+        UI.generateAlerts();
+        UI.showToast('🗑️ تم حذف الخط من الفاتورة');
+    },
+
+    // ═══════════════════════════════════════
+    // ✅ دفع جميع الخطوط دفعة واحدة
+    // ═══════════════════════════════════════
+    async payAllLines() {
+        const monthPicker = document.getElementById('monthPicker');
+        if (!monthPicker) return;
+        const monthKey = monthPicker.value;
+        if (!this.data.months[monthKey] || this.data.months[monthKey].length === 0) {
+            UI.showToast('⚠️ لا يوجد خطوط في هذا الشهر', 'warning');
+            return;
+        }
+        
+        const unpaidCount = this.data.months[monthKey].filter(d => d.status !== 'paid').length;
+        if (unpaidCount === 0) {
+            UI.showToast('✅ جميع الخطوط مدفوعة بالفعل');
+            return;
+        }
+        
+        if (!confirm(`⚠️ تأكيد دفع ${unpaidCount} خط غير مدفوع؟`)) return;
+        
+        this.data.months[monthKey].forEach(d => {
+            d.status = 'paid';
+            d.paidAmount = d.myPrice;
+            d.paid = true;
+        });
+        APP_STATE.currentMonthData = this.data.months[monthKey];
+        
+        await Firebase.saveMonth(monthKey, this.data.months[monthKey]);
+        UI.renderLines();
+        UI.renderStats();
+        UI.generateAlerts();
+        UI.showToast('✅ تم دفع جميع الخطوط بنجاح');
+    },
     
     // ═══════════════════════════════════════
     // 📊 استيراد الأسماء من Excel
@@ -370,7 +431,7 @@ const App = {
     },
     
     // ═══════════════════════════════════════
-    // 🎯 استيراد فاتورة Vodafone Business
+    // 🎯 استيراد فاتورة Vodafone Business (المعدلة)
     // ═══════════════════════════════════════
     
     importInvoiceFromExcel(file) {
@@ -403,109 +464,111 @@ const App = {
                         break;
                     }
                 }
+                if (!targetSheet) targetSheet = workbook.Sheets[workbook.SheetNames[0]];
                 
-                if (!targetSheet) {
-                    targetSheet = workbook.Sheets[workbook.SheetNames[0]];
-                }
+                const rows = XLSX.utils.sheet_to_json(targetSheet, { header: 1, defval: '' });
+                if (!rows.length) throw new Error('الملف فارغ');
                 
-                const rows = XLSX.utils.sheet_to_json(targetSheet, { header: 1 });
-                
-                // البحث عن العناوين من الصف الرابع
-                let headerRowIndex = 0;
+                let headerRowIndex = -1;
                 let phoneColIndex = -1;
                 let amountColIndex = -1;
                 
-                for (let i = 3; i < Math.min(10, rows.length); i++) {
+                for (let i = 3; i < Math.min(15, rows.length); i++) {
                     const row = rows[i];
                     if (!row) continue;
                     
                     for (let j = 0; j < row.length; j++) {
-                        const cell = String(row[j] || '').toLowerCase();
-                        
-                        if (cell.includes('رقم') || cell.includes('number') || cell.includes('msisdn') || cell.includes('phone') || cell.includes('mobile')) {
+                        const cell = String(row[j]).toLowerCase().trim();
+                        if (cell.includes('mobile') || cell.includes('رقم') || cell.includes('number') || cell.includes('phone') || cell.includes('msisdn')) {
                             phoneColIndex = j;
                         }
-                        
-                        if (cell.includes('charge') || cell.includes('amount') || cell.includes('المبلغ') || cell.includes('فاتورة') || cell.includes('total') || cell.includes('taxes')) {
+                        if (cell.includes('total') || cell.includes('charge') || cell.includes('amount') || cell.includes('المبلغ') || cell.includes('فاتورة') || cell.includes('taxes')) {
                             amountColIndex = j;
                         }
                     }
                     
-                    if (phoneColIndex >= 0 || amountColIndex >= 0) {
+                    if (phoneColIndex >= 0 && amountColIndex >= 0) {
                         headerRowIndex = i;
                         break;
                     }
                 }
                 
-                // الافتراضي: A = رقم، J = فاتورة
-                if (phoneColIndex < 0) phoneColIndex = 0;
-                if (amountColIndex < 0) amountColIndex = 9;
+                if (headerRowIndex === -1) {
+                    phoneColIndex = 0;
+                    amountColIndex = 9;
+                    headerRowIndex = 3;
+                    console.warn('⚠️ لم يتم العثور على عناوين، تم استخدام الأعمدة الافتراضية A & J');
+                }
                 
-                console.log('📊 الأعمدة:', { رقم: phoneColIndex, فاتورة: amountColIndex, صف_العناوين: headerRowIndex });
+                console.log(`📊 الأعمدة: رقم=${phoneColIndex+1}, فاتورة=${amountColIndex+1}, صف العناوين=${headerRowIndex+1}`);
                 
-                const monthData = [];
-                let newNamesAdded = false;
-                let processedCount = 0;
-                
+                const extractedLines = [];
                 for (let i = headerRowIndex + 1; i < rows.length; i++) {
                     const row = rows[i];
-                    if (!row) continue;
+                    if (!row || row.length <= Math.max(phoneColIndex, amountColIndex)) continue;
                     
                     let phone = String(row[phoneColIndex] || '').trim();
                     phone = phone.replace(/^0+/, '').replace(/[\s\-\(\)]/g, '');
-                    
                     if (!/^1[0-9]{9}$/.test(phone)) continue;
                     
-                    let invoicePrice = parseFloat(row[amountColIndex]) || 0;
+                    let rawAmount = String(row[amountColIndex] || '0').replace(/[^\d.]/g, '');
+                    let invoicePrice = parseFloat(rawAmount) || 0;
                     if (invoicePrice === 0) continue;
                     
-                    if (!App.data.names[phone]) {
-                        App.data.names[phone] = {
-                            name: '(بدون اسم)',
-                            myPrice: invoicePrice,
-                            packageType: 'غير معروف'
-                        };
-                        newNamesAdded = true;
-                    }
-                    
-                    monthData.push({
-                        phone: phone,
-                        name: App.data.names[phone].name,
-                        myPrice: App.data.names[phone].myPrice,
-                        invoicePrice: invoicePrice,
-                        packageType: App.data.names[phone].packageType,
-                        status: 'unpaid',
-                        paidAmount: 0
+                    const existing = App.data.names[phone];
+                    extractedLines.push({
+                        phone,
+                        name: existing ? existing.name : '(بدون اسم)',
+                        myPrice: existing ? existing.myPrice : invoicePrice,
+                        invoicePrice,
+                        packageType: existing ? existing.packageType : 'غير معروف'
                     });
-                    
-                    processedCount++;
                 }
                 
-                if (monthData.length > 0) {
-                    if (newNamesAdded) {
-                        await Firebase.saveNames(App.data.names);
-                    }
-                    
-                    await Firebase.saveMonth(monthKey, monthData);
-                    App.data.months[monthKey] = monthData;
-                    
-                    UI.updateAllViews();
-                    UI.showTab('lines');
-                    
-                    let msg = `✅ تم رفع فاتورة ${monthKey}`;
-                    msg += ` | ${processedCount} خط`;
-                    if (newNamesAdded) msg += ` | أرقام جديدة`;
-                    UI.showToast(msg);
-                } else {
-                    UI.showToast('⚠️ لم يتم العثور على أرقام صالحة\nتأكد: العمود A أرقام، العمود J مبالغ', 'warning');
+                if (extractedLines.length === 0) {
+                    UI.showToast('⚠️ لم يتم استخراج أي خط - تأكد من الأعمدة والصفوف', 'warning');
+                    return;
                 }
+                
+                UI.showImportPreview(extractedLines, monthKey);
                 
             } catch (error) {
-                console.error('خطأ:', error);
-                UI.showToast('❌ خطأ في قراءة الملف', 'warning');
+                console.error(error);
+                UI.showToast('❌ خطأ في قراءة الملف: ' + error.message, 'warning');
             }
         };
         reader.readAsArrayBuffer(file);
+    },
+    
+    // تأكيد وحفظ بيانات الفاتورة المستخرجة
+    async confirmImport(lines, monthKey) {
+        const monthData = lines.map(l => ({
+            ...l,
+            status: 'unpaid',
+            paidAmount: 0
+        }));
+        
+        let newNames = false;
+        for (let l of lines) {
+            if (!App.data.names[l.phone]) {
+                App.data.names[l.phone] = {
+                    name: l.name,
+                    myPrice: l.myPrice,
+                    packageType: l.packageType
+                };
+                newNames = true;
+            }
+        }
+        
+        if (newNames) await Firebase.saveNames(App.data.names);
+        
+        await Firebase.saveMonth(monthKey, monthData);
+        App.data.months[monthKey] = monthData;
+        
+        UI.closeModal();
+        UI.updateAllViews();
+        UI.showTab('lines');
+        UI.showToast(`✅ تم حفظ ${monthData.length} خط لشهر ${monthKey}`);
     }
 };
 
