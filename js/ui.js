@@ -55,26 +55,63 @@ const UI = {
      * عرض تبويب الخطوط
      */
     renderLinesTab() {
-        const container = document.getElementById('tab-lines');
-        container.innerHTML = `
-            <div class="card">
-                <div class="row-group">
-                    <input type="month" id="monthPicker" onchange="App.loadMonth()">
-                    <button class="btn-secondary" onclick="App.loadMonth()" style="margin-top:0;">عرض الشهر</button>
-                    <button class="btn-outline" onclick="UI.cancelAllPaymentsConfirm()" style="margin-top:0; width:auto;">
-                        ↩️ إلغاء الكل
-                    </button>
+    const container = document.getElementById('tab-lines');
+    
+    // ⬇️ الحصول على قائمة الشهور
+    const months = Object.keys(App.data.months).sort().reverse();
+    const currentMonth = new Date().getFullYear() + '-' + 
+        String(new Date().getMonth() + 1).padStart(2, '0');
+    
+    container.innerHTML = `
+        <div class="card">
+            <div class="row-group">
+                <input type="month" id="monthPicker" onchange="App.loadMonth()" value="${currentMonth}">
+                <button class="btn-secondary" onclick="App.loadMonth()" style="margin-top:0;">عرض</button>
+            </div>
+            
+            <!-- ⬇️ أزرار الحذف ⬇️ -->
+            <div style="display: flex; gap: 6px; margin-top: 8px;">
+                <button class="btn-danger" onclick="App.deleteMonth(document.getElementById('monthPicker').value)" 
+                    style="margin: 0; padding: 8px 12px; font-size: 12px; width: auto;">
+                    🗑️ حذف هذا الشهر
+                </button>
+                ${months.length > 0 ? `
+                <button class="btn-danger" onclick="App.deleteAllMonths()" 
+                    style="margin: 0; padding: 8px 12px; font-size: 12px; width: auto; background: #990000;">
+                    ⚠️ حذف الكل
+                </button>
+                ` : ''}
+            </div>
+            
+            <!-- ⬇️ قائمة الشهور للحذف السريع ⬇️ -->
+            ${months.length > 1 ? `
+            <div style="margin-top: 10px;">
+                <label style="font-size: 11px;">🗑️ حذف شهر محدد:</label>
+                <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">
+                    ${months.map(m => `
+                        <button onclick="App.deleteMonth('${m}')" 
+                            style="margin: 0; padding: 4px 10px; font-size: 10px; width: auto; background: #ff4444; color: white; border-radius: 12px;">
+                            ❌ ${m}
+                        </button>
+                    `).join('')}
                 </div>
             </div>
-            <div class="filter-chips">
-                <button class="chip active" onclick="UI.filterTable('all', this)">الكل</button>
-                <button class="chip" onclick="UI.filterTable('unpaid', this)">عليهم فلوس</button>
-                <button class="chip" onclick="UI.filterTable('partially', this)">دفعوا جزء</button>
-                <button class="chip" onclick="UI.filterTable('paid', this)">خلصوا</button>
-            </div>
-            <div id="statsGrid" class="stats-grid hidden"></div>
-            <div id="lineCards" class="line-cards"></div>
-            <div id="desktopTable" class="desktop-table"></div>
+            ` : ''}
+        </div>
+        
+        <div class="filter-chips">
+            <button class="chip active" onclick="UI.filterTable('all', this)">الكل</button>
+            <button class="chip" onclick="UI.filterTable('unpaid', this)">عليهم فلوس</button>
+            <button class="chip" onclick="UI.filterTable('partially', this)">دفعوا جزء</button>
+            <button class="chip" onclick="UI.filterTable('paid', this)">خلصوا</button>
+        </div>
+        <div id="statsGrid" class="stats-grid hidden"></div>
+        <div id="lineCards" class="line-cards"></div>
+        <div id="desktopTable" class="desktop-table"></div>
+    `;
+    
+    App.loadMonth();
+}
         `;
         
         // تعيين الشهر الحالي
