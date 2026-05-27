@@ -575,4 +575,4 @@ const App = {
 // بدء التطبيق
 document.addEventListener('DOMContentLoaded', () => {
     App.init();
-}
+});
