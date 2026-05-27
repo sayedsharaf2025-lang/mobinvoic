@@ -431,10 +431,10 @@ const App = {
     },
     
     // ═══════════════════════════════════════
-    // 🎯 استيراد فاتورة Vodafone Business (المعدلة)
+    // 🎯 استيراد فاتورة Vodafone Business (async + تحقق)
     // ═══════════════════════════════════════
     
-    importInvoiceFromExcel(file) {
+    async importInvoiceFromExcel(file) {
         const uploadMonth = document.getElementById('uploadMonth');
         if (!uploadMonth) return;
         
@@ -445,7 +445,7 @@ const App = {
         }
         
         const reader = new FileReader();
-        reader.onload = async function(e) {
+        reader.onload = async (e) => {
             try {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
@@ -521,58 +521,4 @@ const App = {
                         name: existing ? existing.name : '(بدون اسم)',
                         myPrice: existing ? existing.myPrice : invoicePrice,
                         invoicePrice,
-                        packageType: existing ? existing.packageType : 'غير معروف'
-                    });
-                }
-                
-                if (extractedLines.length === 0) {
-                    UI.showToast('⚠️ لم يتم استخراج أي خط - تأكد من الأعمدة والصفوف', 'warning');
-                    return;
-                }
-                
-                UI.showImportPreview(extractedLines, monthKey);
-                
-            } catch (error) {
-                console.error(error);
-                UI.showToast('❌ خطأ في قراءة الملف: ' + error.message, 'warning');
-            }
-        };
-        reader.readAsArrayBuffer(file);
-    },
-    
-    // تأكيد وحفظ بيانات الفاتورة المستخرجة
-    async confirmImport(lines, monthKey) {
-        const monthData = lines.map(l => ({
-            ...l,
-            status: 'unpaid',
-            paidAmount: 0
-        }));
-        
-        let newNames = false;
-        for (let l of lines) {
-            if (!App.data.names[l.phone]) {
-                App.data.names[l.phone] = {
-                    name: l.name,
-                    myPrice: l.myPrice,
-                    packageType: l.packageType
-                };
-                newNames = true;
-            }
-        }
-        
-        if (newNames) await Firebase.saveNames(App.data.names);
-        
-        await Firebase.saveMonth(monthKey, monthData);
-        App.data.months[monthKey] = monthData;
-        
-        UI.closeModal();
-        UI.updateAllViews();
-        UI.showTab('lines');
-        UI.showToast(`✅ تم حفظ ${monthData.length} خط لشهر ${monthKey}`);
-    }
-};
-
-// بدء التطبيق
-document.addEventListener('DOMContentLoaded', () => {
-    App.init();
-});
+                        packageType: existing ? existing.packageType : 'غير مع
