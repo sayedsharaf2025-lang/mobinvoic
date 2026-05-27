@@ -2,6 +2,8 @@
 // واجهة المستخدم - ui.js
 // ═══════════════════════════════════════════
 
+let pendingImport = null; // لتخزين بيانات الفاتورة مؤقتاً قبل التأكيد
+
 const UI = {
     
     showTab(tabName, btnElement = null) {
@@ -43,26 +45,20 @@ const UI = {
                 <div class="row-group">
                     <input type="month" id="monthPicker" onchange="App.loadMonth()" value="${currentMonth}">
                     <button class="btn-secondary" onclick="App.loadMonth()" style="margin-top:0;">عرض</button>
-                    <button class="btn-outline" onclick="UI.cancelAllPaymentsConfirm()" style="margin-top:0; width:auto;">↩️ إلغاء الكل</button>
                 </div>
                 
-                <div style="display: flex; gap: 6px; margin-top: 8px;">
-                    <button class="btn-danger" onclick="App.deleteMonth(document.getElementById('monthPicker').value)" 
-                        style="margin: 0; padding: 8px 12px; font-size: 12px; width: auto;">🗑️ حذف هذا الشهر</button>
-                    ${months.length > 0 ? `
-                    <button class="btn-danger" onclick="App.deleteAllMonths()" 
-                        style="margin: 0; padding: 8px 12px; font-size: 12px; width: auto; background: #990000;">⚠️ حذف الكل</button>
-                    ` : ''}
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;">
+                    <button class="btn-success" onclick="App.payAllLines()" style="margin:0; padding:8px 12px; font-size:12px; width:auto;">✅ دفع الكل</button>
+                    <button class="btn-outline" onclick="UI.cancelAllPaymentsConfirm()" style="margin:0; padding:8px 12px; font-size:12px; width:auto;">↩️ إلغاء الكل</button>
+                    <button class="btn-danger" onclick="App.deleteMonth(document.getElementById('monthPicker').value)" style="margin:0; padding:8px 12px; font-size:12px; width:auto;">🗑️ حذف الشهر</button>
+                    ${months.length > 0 ? `<button class="btn-danger" onclick="App.deleteAllMonths()" style="margin:0; padding:8px 12px; font-size:12px; width:auto; background:#990000;">⚠️ حذف الكل</button>` : ''}
                 </div>
                 
                 ${months.length > 1 ? `
                 <div style="margin-top: 10px;">
                     <label style="font-size: 11px; color: var(--gray-dark);">🗑️ حذف شهر:</label>
                     <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">
-                        ${months.map(m => `
-                            <button onclick="App.deleteMonth('${m}')" 
-                                style="margin: 0; padding: 4px 10px; font-size: 10px; width: auto; background: #ff4444; color: white; border-radius: 12px;">❌ ${m}</button>
-                        `).join('')}
+                        ${months.map(m => `<button onclick="App.deleteMonth('${m}')" style="margin:0; padding:4px 10px; font-size:10px; width:auto; background:#ff4444; color:white; border-radius:12px;">❌ ${m}</button>`).join('')}
                     </div>
                 </div>` : ''}
             </div>
@@ -297,6 +293,7 @@ const UI = {
                         ${d.status !== 'paid' ? `<button class="btn-success" onclick="App.setPaymentStatus('${d.phone}', 'paid')">✅ دفع</button>` : ''}
                         ${d.status !== 'paid' ? `<button class="btn-warning" onclick="UI.showPartialModal('${d.phone}', ${d.myPrice})">💵 جزء</button>` : ''}
                         ${d.status === 'paid' ? `<button class="btn-danger" onclick="App.cancelPayment('${d.phone}')">↩️ إلغاء</button>` : ''}
+                        <button class="btn-danger" onclick="App.deleteLineFromMonth('${d.phone}')" style="font-size:10px; padding:4px;">🗑️</button>
                     </div>
                 </div>`;
         });
@@ -316,6 +313,7 @@ const UI = {
                 <td><div class="tbl-action-group">
                     ${d.status !== 'paid' ? `<button class="btn-success btn-sm" onclick="App.setPaymentStatus('${d.phone}', 'paid')">دفع</button>` : ''}
                     ${d.status === 'paid' ? `<button class="btn-danger btn-sm" onclick="App.cancelPayment('${d.phone}')">إلغاء</button>` : ''}
+                    <button class="btn-danger btn-sm" onclick="App.deleteLineFromMonth('${d.phone}')">🗑️</button>
                 </div></td>
             </tr>`;
         });
@@ -532,6 +530,34 @@ const UI = {
         }
     },
     
+    // ════════════════════════ نافذة تأكيد رفع الفاتورة ════════════════════════
+    
+    showImportPreview(lines, monthKey) {
+        const totalAmount = lines.reduce((s, l) => s + l.invoicePrice, 0);
+        let html = `
+        <div class="modal-overlay">
+        <div class="modal-card" style="max-width:600px">
+            <div class="card-title">📊 تأكيد رفع الفاتورة</div>
+            <p>شهر: <strong>${monthKey}</strong> | عدد الخطوط: <strong>${lines.length}</strong> | الإجمالي: <strong>${totalAmount.toFixed(2)} ج</strong></p>
+            <div style="max-height:300px;overflow-y:auto;margin:10px 0;">
+                <table style="width:100%;font-size:12px">
+                    <tr><th>الرقم</th><th>الاسم</th><th>الفاتورة</th><th>الباقة</th></tr>`;
+        
+        lines.forEach(l => {
+            html += `<tr><td>0${l.phone}</td><td>${l.name}</td><td>${l.invoicePrice}</td><td>${l.packageType}</td></tr>`;
+        });
+        
+        html += `</table></div>
+            <div class="flex gap-2">
+                <button class="btn-success" onclick="App.confirmImport(pendingImport.lines, pendingImport.monthKey)">💾 حفظ الفاتورة</button>
+                <button class="btn-secondary" onclick="UI.closeModal()">إلغاء</button>
+            </div>
+        </div></div>`;
+        
+        pendingImport = { lines, monthKey };
+        document.getElementById('modalContainer').innerHTML = html;
+    },
+    
     // ════════════════════════ مودالات ════════════════════════
     
     showPartialModal(phone, myPrice) {
@@ -726,4 +752,3 @@ const UI = {
         this.generateAlerts();
         if (APP_STATE.currentTab === 'lines') { this.renderLines(); this.renderStats(); }
     }
-
