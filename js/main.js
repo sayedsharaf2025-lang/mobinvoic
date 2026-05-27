@@ -16,13 +16,13 @@ const App = {
         
         const now = new Date();
         const currentMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-        document.getElementById('monthPicker').value = currentMonth;
-        document.getElementById('uploadMonth').value = currentMonth;
         
-        document.getElementById('pdfInput').addEventListener('change', function() {
-            document.getElementById('uploadFileName').textContent = 
-                this.files[0]?.name || 'اضغط لاختيار ملف PDF الفاتورة الأصلي';
-        });
+        setTimeout(() => {
+            const monthPicker = document.getElementById('monthPicker');
+            const uploadMonth = document.getElementById('uploadMonth');
+            if (monthPicker) monthPicker.value = currentMonth;
+            if (uploadMonth) uploadMonth.value = currentMonth;
+        }, 500);
         
         console.log('✅ تم تهيئة نظام فودافون السحابي بنجاح');
     },
@@ -67,7 +67,10 @@ const App = {
     },
     
     async refreshMonthNames() {
-        const monthKey = document.getElementById('monthPicker').value;
+        const monthPicker = document.getElementById('monthPicker');
+        if (!monthPicker) return;
+        
+        const monthKey = monthPicker.value;
         if (!monthKey || !this.data.months[monthKey]) return;
         
         const updatedData = this.data.months[monthKey].map(item => {
@@ -93,7 +96,10 @@ const App = {
     },
     
     loadMonth() {
-        const monthKey = document.getElementById('monthPicker').value;
+        const monthPicker = document.getElementById('monthPicker');
+        if (!monthPicker) return;
+        
+        const monthKey = monthPicker.value;
         APP_STATE.currentMonthData = this.data.months[monthKey] || [];
         
         APP_STATE.currentMonthData.forEach(d => {
@@ -108,7 +114,10 @@ const App = {
     },
     
     async setPaymentStatus(phone, status) {
-        const monthKey = document.getElementById('monthPicker').value;
+        const monthPicker = document.getElementById('monthPicker');
+        if (!monthPicker) return;
+        
+        const monthKey = monthPicker.value;
         const idx = APP_STATE.currentMonthData.findIndex(d => d.phone === phone);
         
         if (idx !== -1) {
@@ -134,7 +143,10 @@ const App = {
     },
     
     async submitPartialPayment(phone, amount) {
-        const monthKey = document.getElementById('monthPicker').value;
+        const monthPicker = document.getElementById('monthPicker');
+        if (!monthPicker) return;
+        
+        const monthKey = monthPicker.value;
         const idx = APP_STATE.currentMonthData.findIndex(d => d.phone === phone);
         
         if (idx !== -1) {
@@ -161,7 +173,10 @@ const App = {
     },
     
     async cancelPayment(phone) {
-        const monthKey = document.getElementById('monthPicker').value;
+        const monthPicker = document.getElementById('monthPicker');
+        if (!monthPicker) return;
+        
+        const monthKey = monthPicker.value;
         const idx = APP_STATE.currentMonthData.findIndex(d => d.phone === phone);
         
         if (idx !== -1) {
@@ -201,70 +216,63 @@ const App = {
         
         return warnings;
     },
+    
     // ═══════════════════════════════════════
-// 🗑️ حذف فاتورة شهر كامل
-// ═══════════════════════════════════════
-
-async deleteMonth(monthKey) {
-    if (!monthKey) {
-        UI.showToast('⚠️ اختر الشهر الأول', 'warning');
-        return;
-    }
+    // 🗑️ حذف الفواتير
+    // ═══════════════════════════════════════
     
-    if (!this.data.months[monthKey]) {
-        UI.showToast('⚠️ هذا الشهر غير موجود', 'warning');
-        return;
-    }
+    async deleteMonth(monthKey) {
+        if (!monthKey) {
+            UI.showToast('⚠️ اختر الشهر الأول', 'warning');
+            return;
+        }
+        
+        if (!this.data.months[monthKey]) {
+            UI.showToast('⚠️ هذا الشهر غير موجود', 'warning');
+            return;
+        }
+        
+        const lineCount = this.data.months[monthKey].length;
+        
+        if (confirm(`⚠️ هل أنت متأكد من حذف فاتورة شهر ${monthKey}؟\n\nعدد الخطوط: ${lineCount}\n\nلا يمكن التراجع عن هذا الإجراء!`)) {
+            const backup = Backup.create('pre_delete');
+            Backup.saveLocally(backup);
+            
+            await Firebase.request(`/months/${monthKey}`, 'DELETE');
+            delete this.data.months[monthKey];
+            
+            if (document.getElementById('monthPicker')?.value === monthKey) {
+                APP_STATE.currentMonthData = [];
+                UI.renderLines();
+                UI.renderStats();
+            }
+            
+            UI.generateAlerts();
+            UI.renderLinesTab();
+            UI.showToast(`🗑️ تم حذف فاتورة شهر ${monthKey} بنجاح`);
+        }
+    },
     
-    const lineCount = this.data.months[monthKey].length;
-    
-    if (confirm(`⚠️ هل أنت متأكد من حذف فاتورة شهر ${monthKey}؟\n\nعدد الخطوط: ${lineCount}\n\nلا يمكن التراجع عن هذا الإجراء!`)) {
-        // نسخ احتياطي قبل الحذف
-        const backup = Backup.create('pre_delete');
-        Backup.saveLocally(backup);
+    async deleteAllMonths() {
+        const monthsCount = Object.keys(this.data.months).length;
+        const totalLines = Object.values(this.data.months).reduce((sum, m) => sum + m.length, 0);
         
-        // حذف من السحابة
-        await Firebase.request(`/months/${monthKey}`, 'DELETE');
-        
-        // حذف من الذاكرة
-        delete this.data.months[monthKey];
-        
-        // تحديث الواجهة
-        UI.renderLines();
-        UI.renderStats();
-        UI.generateAlerts();
-        
-        UI.showToast(`🗑️ تم حذف فاتورة شهر ${monthKey} بنجاح`);
-    }
-},
-
-/**
- * حذف جميع الفواتير (كل الشهور)
- */
-async deleteAllMonths() {
-    const monthsCount = Object.keys(this.data.months).length;
-    const totalLines = Object.values(this.data.months).reduce((sum, m) => sum + m.length, 0);
-    
-    if (confirm(`⚠️⚠️ تحذير خطير ⚠️⚠️\n\nحذف جميع الفواتير:\nعدد الشهور: ${monthsCount}\nإجمالي الخطوط: ${totalLines}\n\nلا يمكن التراجع! متأكد؟`)) {
-        // نسخ احتياطي قبل الحذف
-        const backup = Backup.create('pre_delete_all');
-        Backup.saveLocally(backup);
-        
-        // حذف من السحابة
-        await Firebase.request('/months', 'PUT', {});
-        
-        // حذف من الذاكرة
-        this.data.months = {};
-        APP_STATE.currentMonthData = [];
-        
-        // تحديث الواجهة
-        UI.renderLines();
-        UI.renderStats();
-        UI.generateAlerts();
-        
-        UI.showToast('🗑️ تم حذف جميع الفواتير بنجاح');
-    }
-}
+        if (confirm(`⚠️⚠️ تحذير خطير ⚠️⚠️\n\nحذف جميع الفواتير:\nعدد الشهور: ${monthsCount}\nإجمالي الخطوط: ${totalLines}\n\nلا يمكن التراجع! متأكد؟`)) {
+            const backup = Backup.create('pre_delete_all');
+            Backup.saveLocally(backup);
+            
+            await Firebase.request('/months', 'PUT', {});
+            this.data.months = {};
+            APP_STATE.currentMonthData = [];
+            
+            UI.renderLines();
+            UI.renderStats();
+            UI.generateAlerts();
+            UI.renderLinesTab();
+            
+            UI.showToast('🗑️ تم حذف جميع الفواتير بنجاح');
+        }
+    },
     
     // ═══════════════════════════════════════
     // 📊 استيراد الأسماء من Excel
@@ -366,7 +374,10 @@ async deleteAllMonths() {
     // ═══════════════════════════════════════
     
     importInvoiceFromExcel(file) {
-        const monthKey = document.getElementById('uploadMonth').value;
+        const uploadMonth = document.getElementById('uploadMonth');
+        if (!uploadMonth) return;
+        
+        const monthKey = uploadMonth.value;
         if (!monthKey) {
             UI.showToast('⚠️ اختر الشهر أولاً', 'warning');
             return;
@@ -378,10 +389,9 @@ async deleteAllMonths() {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
                 
-                // البحث عن الشيت الصحيح
                 let targetSheet = null;
                 const sheetNames = [
-                    'Voice Lines Charges Summary',
+                    'Vodafone Business Voice Lines Charges Summary',
                     'Business Voice Lines Charges',
                     'Charges Summary',
                     'Sheet1'
@@ -390,20 +400,17 @@ async deleteAllMonths() {
                 for (let name of sheetNames) {
                     if (workbook.Sheets[name]) {
                         targetSheet = workbook.Sheets[name];
-                        console.log('✅ تم العثور على الشيت:', name);
                         break;
                     }
                 }
                 
                 if (!targetSheet) {
-                    const firstSheetName = workbook.SheetNames[0];
-                    targetSheet = workbook.Sheets[firstSheetName];
-                    console.log('⚠️ استخدام الشيت الأول:', firstSheetName);
+                    targetSheet = workbook.Sheets[workbook.SheetNames[0]];
                 }
                 
                 const rows = XLSX.utils.sheet_to_json(targetSheet, { header: 1 });
                 
-                // البحث عن صف العناوين
+                // البحث عن العناوين من الصف الرابع
                 let headerRowIndex = 0;
                 let phoneColIndex = -1;
                 let amountColIndex = -1;
@@ -415,11 +422,11 @@ async deleteAllMonths() {
                     for (let j = 0; j < row.length; j++) {
                         const cell = String(row[j] || '').toLowerCase();
                         
-                        if (cell.includes('رقم') || cell.includes('number') || cell.includes('msisdn') || cell.includes('phone')) {
+                        if (cell.includes('رقم') || cell.includes('number') || cell.includes('msisdn') || cell.includes('phone') || cell.includes('mobile')) {
                             phoneColIndex = j;
                         }
                         
-                        if (cell.includes('charge') || cell.includes('amount') || cell.includes('المبلغ') || cell.includes('فاتورة') || cell.includes('total')) {
+                        if (cell.includes('charge') || cell.includes('amount') || cell.includes('المبلغ') || cell.includes('فاتورة') || cell.includes('total') || cell.includes('taxes')) {
                             amountColIndex = j;
                         }
                     }
@@ -430,16 +437,12 @@ async deleteAllMonths() {
                     }
                 }
                 
-                // لو ملقيش عناوين، استخدم الافتراضي (A = رقم، J = فاتورة)
-                if (phoneColIndex < 0) phoneColIndex = 0;  // العمود A
-                if (amountColIndex < 0) amountColIndex = 9; // العمود J
+                // الافتراضي: A = رقم، J = فاتورة
+                if (phoneColIndex < 0) phoneColIndex = 0;
+                if (amountColIndex < 0) amountColIndex = 9;
                 
-                console.log('📊 الأعمدة المستخدمة:', { 
-                    رقم: `عمود ${phoneColIndex + 1}`, 
-                    فاتورة: `عمود ${amountColIndex + 1}` 
-                });
+                console.log('📊 الأعمدة:', { رقم: phoneColIndex, فاتورة: amountColIndex, صف_العناوين: headerRowIndex });
                 
-                // استخراج البيانات
                 const monthData = [];
                 let newNamesAdded = false;
                 let processedCount = 0;
@@ -458,7 +461,7 @@ async deleteAllMonths() {
                     
                     if (!App.data.names[phone]) {
                         App.data.names[phone] = {
-                            name: `(بدون اسم)`,
+                            name: '(بدون اسم)',
                             myPrice: invoicePrice,
                             packageType: 'غير معروف'
                         };
@@ -490,11 +493,11 @@ async deleteAllMonths() {
                     UI.showTab('lines');
                     
                     let msg = `✅ تم رفع فاتورة ${monthKey}`;
-                    msg += `\n📊 ${processedCount} خط`;
-                    if (newNamesAdded) msg += `\n🆕 تم إضافة أرقام جديدة`;
+                    msg += ` | ${processedCount} خط`;
+                    if (newNamesAdded) msg += ` | أرقام جديدة`;
                     UI.showToast(msg);
                 } else {
-                    UI.showToast('⚠️ لم يتم العثور على أرقام صالحة\nتأكد من: العمود A للأرقام، العمود J للمبالغ', 'warning');
+                    UI.showToast('⚠️ لم يتم العثور على أرقام صالحة\nتأكد: العمود A أرقام، العمود J مبالغ', 'warning');
                 }
                 
             } catch (error) {
