@@ -726,4 +726,4 @@ const UI = {
         this.generateAlerts();
         if (APP_STATE.currentTab === 'lines') { this.renderLines(); this.renderStats(); }
     }
-};
+
