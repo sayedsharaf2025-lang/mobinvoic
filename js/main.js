@@ -317,7 +317,7 @@ const App = {
                 // البحث عن الشيت الصحيح
                 let targetSheet = null;
                 const sheetNames = [
-                    'Vodafone Business Voice Lines Charges Summary',
+                    'Voice Lines Charges Summary',
                     'Business Voice Lines Charges',
                     'Charges Summary',
                     'Sheet1'
@@ -344,7 +344,7 @@ const App = {
                 let phoneColIndex = -1;
                 let amountColIndex = -1;
                 
-                for (let i = 0; i < Math.min(10, rows.length); i++) {
+                for (let i = 3; i < Math.min(10, rows.length); i++) {
                     const row = rows[i];
                     if (!row) continue;
                     
