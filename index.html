@@ -4,15 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>منظومة إدارة فواتير فودافون</title>
-    <!-- خط Cairo العصري -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <!-- مكتبة الأيقونات FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-    <!-- الشريط الجانبي للتنقل المستوحى من فودافون -->
     <div class="sidebar">
         <div class="logo">
             <i class="fa-solid fa-droplet"></i>
@@ -27,20 +24,25 @@
         </ul>
     </div>
 
-    <!-- المحتوى الرئيسي للموقع -->
     <div class="main-content">
         
-        <!-- 1. شاشة البحث الرئيسية والشاملة (تعديل - حذف - إضافة) -->
         <section id="search-screen" class="app-screen active-screen">
             <h2><i class="fa-solid fa-magnifying-glass text-red"></i> الاستعلام الشامل وإدارة الحسابات</h2>
-            <div class="card search-box">
-                <input type="text" id="global-search-input" placeholder="ابحث هنا بالاسم أو الرقم لتعديل البيانات واستعراض الفواتير...">
+            <div class="card search-box" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                <input type="text" id="global-search-input" placeholder="ابحث هنا بالاسم أو الرقم لتعديل البيانات واستعراض الفواتير..." style="flex: 2; min-width: 250px;">
+                <div style="flex: 1; min-width: 160px;">
+                    <select id="search-month-select" class="form-control" style="margin: 0;">
+                        <option value="all">كل الأشهر المتاحة</option>
+                    </select>
+                </div>
                 <button class="btn btn-red" onclick="executeGlobalSearch()"><i class="fa-solid fa-search"></i> بحث فوري</button>
             </div>
+            
+            <div id="search-summary-area" style="display: none; margin-bottom: 20px;"></div>
+            
             <div id="search-results-area" style="margin-top: 20px;"></div>
         </section>
 
-        <!-- 2. شاشة إدارة واستيراد الفواتير (مع معالجة الأسماء) -->
         <section id="invoices-screen" class="app-screen">
             <h2><i class="fa-solid fa-file-invoice-dollar text-red"></i> استيراد ومعالجة الفواتير من Excel</h2>
             <div class="grid-2">
@@ -67,7 +69,6 @@
                 </div>
             </div>
 
-            <!-- جدول المعالجة الذكي لمعرفة إذا كانت الأسماء مسجلة أم لا -->
             <div class="card table-card" id="invoice-preview-card" style="display:none; margin-top: 20px;">
                 <div class="table-header">
                     <div>
@@ -92,15 +93,14 @@
             </div>
         </section>
 
-        <!-- 3. شاشة التحصيل المالي -->
         <section id="collection-screen" class="app-screen">
-            <h2><i class="fa-solid fa-money-bill-wave text-red"></i> شاشة التحصيل المالي والسداد</h2>
+            <h2><i class="fa-solid fa-money-bill-wave text-red"></i> شاشة التحصيل المالي والسداد (المستحقات المعلقة)</h2>
             <div class="card filter-box">
                 <div class="form-group" style="flex: 1; margin: 0 10px;">
                     <label>اختر شهر الاستحقاق الفعلي</label>
                     <select id="collection-month-select" class="form-control" onchange="loadCollectionData()"></select>
                 </div>
-                <button class="btn btn-green" onclick="payAllActiveInvoices()"><i class="fa-solid fa-check-double"></i> تحصيل وسداد كل الأرقام معاً</button>
+                <button class="btn btn-green" onclick="payAllActiveInvoices()"><i class="fa-solid fa-check-double"></i> تحصيل وسداد كل الأرقام المتبقية معاً</button>
             </div>
 
             <div class="card table-card" style="margin-top: 20px;">
@@ -114,7 +114,7 @@
                                 <th>الفاتورة الفعلية</th>
                                 <th>المدفوع حتى الآن</th>
                                 <th>حالة الحساب</th>
-                                <th>إجراءات السداد الجزئي/الكلي</th>
+                                <th>إجراءات السداد الجزئي / إلغاء الدفع</th>
                             </tr>
                         </thead>
                         <tbody id="collection-table-body"></tbody>
@@ -123,7 +123,6 @@
             </div>
         </section>
 
-        <!-- 4. شاشة الدفع المقدم -->
         <section id="advance-screen" class="app-screen">
             <h2><i class="fa-solid fa-wallet text-red"></i> محفظة الإيداع والدفع المقدم</h2>
             <div class="card search-box">
@@ -153,11 +152,9 @@
             </div>
         </section>
 
-        <!-- 5. شاشة الإعدادات ودليل الأفراد -->
         <section id="settings-screen" class="app-screen">
             <h2><i class="fa-solid fa-gear text-red"></i> الإعدادات وقاعدة بيانات الأفراد والباقات</h2>
             <div class="grid-2">
-                <!-- استيراد ملف إكسيل الأفراد -->
                 <div class="card">
                     <h3><i class="fa-solid fa-file-excel" style="color: #008559;"></i> استيراد دليل الأفراد الأساسي</h3>
                     <p style="font-size: 13px; color: #666; margin-bottom: 15px;">ارفع ملف Excel المسمى (الافراد والباقات.xlsx)</p>
@@ -169,7 +166,6 @@
                     </div>
                 </div>
 
-                <!-- إضافة فرد يدوي جديد -->
                 <div class="card">
                     <h3><i class="fa-solid fa-user-plus"></i> إضافة رقم يدوي جديد للمنظومة</h3>
                     <div class="grid-2">
@@ -182,7 +178,6 @@
                 </div>
             </div>
 
-            <!-- جدول استعراض الأفراد في لوحة الإعدادات -->
             <div class="card table-card" style="margin-top: 20px;">
                 <div class="table-header">
                     <h3>دليل الهواتف والأفراد المعتمدين الحاليين</h3>
@@ -206,7 +201,6 @@
         </section>
     </div>
 
-    <!-- نافذة تعديل بيانات العميل العائمة (Modal Popup) -->
     <div id="edit-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -235,14 +229,9 @@
         </div>
     </div>
 
-    <!-- مكتبات Firebase الأساسية القديمة المتوافقة مع المتصفح المباشر -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-    
-    <!-- مكتبة لقرائة ملفات Excel (.xlsx) مباشرةً من المتصفح -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
-    <!-- ملف المنطق والعمليات -->
     <script src="app.js"></script>
 </body>
 </html>
