@@ -22,7 +22,6 @@ function formatPhoneNumber(num) {
     if (!num) return '';
     let s = num.toString().trim();
     if (s.endsWith('.0')) s = s.substring(0, s.length - 2);
-    // إذا كان طول الرقم 10 ويبدأ بأرقام فودافون أو الاتصالات الشهيرة بدون صفر
     if (s.length === 10 && (s.startsWith('1') || s.startsWith('2') || s.startsWith('5'))) {
         s = '0' + s;
     }
@@ -44,14 +43,15 @@ document.addEventListener("DOMContentLoaded", function() {
             document.getElementById(target).classList.add('active-screen');
             
             if (target === 'settings-screen') loadSettingsTable();
-            if (target === 'collection-screen' || target === 'invoices-screen') updateInvoiceMonthsDropdowns();
+            updateInvoiceMonthsDropdowns();
         });
     });
 
     syncGlobalSettings();
+    updateInvoiceMonthsDropdowns(); // ملء التواريخ فور فتح المنظومة مباشرة
 });
 
-// مزامنة حية ومستمرة لبيانات الأفراد المسجلين محلياً لسرعة التحقق والمعالجة الفورية
+// مزامنة حية ومستمرة لبيانات الأفراد المسجلين
 function syncGlobalSettings() {
     db.ref('settings').on('value', snapshot => {
         loadedGlobalSettings = snapshot.val() || {};
@@ -81,7 +81,6 @@ function handleSettingsImport(e) {
 function processSettingsExcel(data) {
     let importedCount = 0;
     data.forEach(row => {
-        // مطابقة مسميات أعمدة ملف (الافراد والباقات.xlsx)
         let name = row['الاسم'] || '';
         let rawPhone = row['الرقم'] || '';
         let price = row['سعر الباقه'] || 0;
@@ -98,7 +97,7 @@ function processSettingsExcel(data) {
             importedCount++;
         }
     });
-    alert(`تم بنجاح استيراد وتحديث دليل عدد (${importedCount}) فرد من ملف الاكسيل في النظام.`);
+    alert(`تم بنجاح استيراد وتحديث دليل عدد (${importedCount}) فرد من ملف الاكسيل.`);
     loadSettingsTable();
 }
 
@@ -143,29 +142,35 @@ function addNewUserFromSettings() {
     if (!name || !phone) return alert("الرجاء تعبئة الاسم ورقم الهاتف على الأقل!");
 
     db.ref('settings/' + phone).set({ name, price, ratePlan: plan }, () => {
-        alert("تم الحفظ يدوياً بنجاح.");
+        alert("تم الحفظ بنجاح.");
         loadSettingsTable();
     });
 }
 
 function deleteUser(phone) {
-    if (confirm(`هل ترغب بحذف الرقم (${phone}) نهائياً من إعدادات النظام؟`)) {
-        db.ref('settings/' + phone).remove(() => loadSettingsTable());
+    if (confirm(`هل ترغب بحذف الرقم (${phone}) نهائياً من النظام؟`)) {
+        db.ref('settings/' + phone).remove(() => {
+            loadSettingsTable();
+            if(document.getElementById('global-search-input').value) executeGlobalSearch();
+        });
     }
 }
 
 // ==========================================
-// [2] شاشة معالجة وفحص الفواتير (PROCESSING STEP)
+// [2] شاشة استيراد ومعالجة الفواتير (إصلاح مشكلة التداخل)
 // ==========================================
 function handleInvoiceImport(e) {
     const file = e.target.files[0];
     if (!file) return;
 
+    // تصفير أولي للجدول والمصفوفة لمنع ظهور الفاتورة السابقة كلياً
+    currentParsedInvoice = [];
+    document.querySelector('#invoice-preview-table tbody').innerHTML = '<tr><td colspan="4" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> جاري معالجة وفحص أرقام الملف...</td></tr>';
+
     const reader = new FileReader();
     reader.onload = function(evt) {
         const data = new Uint8Array(evt.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
-        // القراءة من ورقة Voice Lines Charges Summary المذكورة بملفك
         const sheetName = workbook.SheetNames[0]; 
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
@@ -175,14 +180,12 @@ function handleInvoiceImport(e) {
     reader.readAsArrayBuffer(file);
 }
 
-// دالة المعالجة والتحقق من الأسماء قبل الاعتماد
 function processInvoiceExcel(data) {
     currentParsedInvoice = [];
     const tbody = document.querySelector('#invoice-preview-table tbody');
     tbody.innerHTML = '';
 
     data.forEach(row => {
-        // مطابقة مسميات أعمدة ملف (فاتورة 04-2026.xlsx)
         let rawPhone = row['Mobile Number'] || '';
         let ratePlan = row['Rate Plan'] || '';
         let totalTaxes = row['Total After Taxes'] || 0;
@@ -190,7 +193,6 @@ function processInvoiceExcel(data) {
         let phone = formatPhoneNumber(rawPhone);
 
         if (phone) {
-            // التحقق والـ المعالجة المطلوبة: لمعرفة الاسماء نزلت في الاعدادات مسبقاً او لا
             const matchedUser = loadedGlobalSettings[phone];
             let statusBadge = '';
 
@@ -226,7 +228,6 @@ function saveProcessedInvoice() {
     if (currentParsedInvoice.length === 0) return alert("لا توجد بيانات صالحة للحفظ.");
 
     currentParsedInvoice.forEach(item => {
-        // منطق الفاتورة المطلوب: إذا كان هناك أرقام لم يتم تسجيلها بالإعدادات، تضاف بدون اسم
         if (!loadedGlobalSettings[item.phone]) {
             db.ref('settings/' + item.phone).set({
                 name: "بدون اسم",
@@ -235,7 +236,6 @@ function saveProcessedInvoice() {
             });
         }
 
-        // حفظ الفاتورة وتفاصيلها بالشهر المحدد بالكامل
         db.ref(`invoices/${month}/${item.phone}`).set({
             ratePlan: item.ratePlan,
             totalAfterTaxes: item.totalTaxes,
@@ -244,7 +244,12 @@ function saveProcessedInvoice() {
         });
     });
 
-    alert(`تم بنجاح اعتماد وحفظ فاتورة شهر (${month})، وإضافة كافة الأرقام الجديدة بدون اسم في النظام بنجاح مالي كامل.`);
+    alert(`تم بنجاح اعتماد وحفظ فاتورة شهر (${month}) بالكامل.`);
+    
+    // الحل الجذري لمنع تكرار أو بقاء الملف السابق ظاهرًا بعد الرفع:
+    currentParsedInvoice = [];
+    document.getElementById('invoice-file-input').value = '';
+    document.querySelector('#invoice-preview-table tbody').innerHTML = '';
     document.getElementById('invoice-preview-card').style.display = 'none';
     updateInvoiceMonthsDropdowns();
 }
@@ -254,12 +259,16 @@ function updateInvoiceMonthsDropdowns() {
         const months = snapshot.val() || {};
         const delSelect = document.getElementById('delete-invoice-month-select');
         const collSelect = document.getElementById('collection-month-select');
-        delSelect.innerHTML = '<option value="">-- اختر الشهر --</option>';
-        collSelect.innerHTML = '<option value="">-- اختر الشهر --</option>';
+        const searchSelect = document.getElementById('search-month-select');
+        
+        if (delSelect) delSelect.innerHTML = '<option value="">-- اختر الشهر --</option>';
+        if (collSelect) collSelect.innerHTML = '<option value="">-- اختر الشهر --</option>';
+        if (searchSelect) searchSelect.innerHTML = '<option value="all">كل الأشهر المتاحة</option>';
 
         for (let m in months) {
-            delSelect.innerHTML += `<option value="${m}">${m}</option>`;
-            collSelect.innerHTML += `<option value="${m}">${m}</option>`;
+            if (delSelect) delSelect.innerHTML += `<option value="${m}">${m}</option>`;
+            if (collSelect) collSelect.innerHTML += `<option value="${m}">${m}</option>`;
+            if (searchSelect) searchSelect.innerHTML += `<option value="${m}">${m}</option>`;
         }
     });
 }
@@ -271,30 +280,40 @@ function deleteStoredInvoice() {
         db.ref(`invoices/${month}`).remove(() => {
             alert("تم الحذف بنجاح.");
             updateInvoiceMonthsDropdowns();
+            loadCollectionData();
         });
     }
 }
 
 // ==========================================
-// [3] شاشة التحصيل المالي والسداد الجماعي
+// [3] شاشة التحصيل المالي (عرض أرقام لم تدفع فقط)
 // ==========================================
 function loadCollectionData() {
     const month = document.getElementById('collection-month-select').value;
+    const tbody = document.getElementById('collection-table-body');
+    tbody.innerHTML = '';
     if (!month) return;
 
     db.ref(`invoices/${month}`).once('value', snapshot => {
         const invoices = snapshot.val() || {};
-        const tbody = document.getElementById('collection-table-body');
-        tbody.innerHTML = '';
+        let unpaidCount = 0;
 
         for (let phone in invoices) {
             const inv = invoices[phone];
             const user = loadedGlobalSettings[phone] || { name: "بدون اسم", price: 0 };
             const remaining = inv.totalAfterTaxes - (inv.paidAmount || 0);
             
-            const statusHtml = remaining <= 0 
-                ? '<span class="badge badge-green">مدفوع بالكامل</span>' 
-                : `<span class="badge badge-red">متبقي: ${remaining.toFixed(2)}</span>`;
+            // التعديل: يتم عرض الأرقام التي لم تدفع فقط (المتبقي أكبر من صفر)
+            if (remaining <= 0) continue; 
+            
+            unpaidCount++;
+            const statusHtml = `<span class="badge badge-red">متبقي: ${remaining.toFixed(2)} ج.م</span>`;
+            
+            // إضافة زر إلغاء سداد فرعي في حال الدفع الجزئي للحساب
+            let cancelBtn = '';
+            if ((inv.paidAmount || 0) > 0) {
+                cancelBtn = `<button class="btn btn-outline" style="padding:5px 10px; color:orange; margin-right:5px;" onclick="cancelPayment('${month}', '${phone}')"><i class="fa-solid fa-rotate-left"></i> إلغاء</button>`;
+            }
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -307,9 +326,15 @@ function loadCollectionData() {
                 <td>
                     <input type="number" placeholder="المبلغ" id="pay-amt-${phone}" class="form-control" style="width:80px; display:inline-block; padding:5px;">
                     <button class="btn btn-green" style="padding:5px 10px;" onclick="collectPayment('${month}', '${phone}', ${inv.totalAfterTaxes}, ${inv.paidAmount || 0})">تسجيل</button>
+                    ${cancelBtn}
                 </td>
             `;
             tbody.appendChild(tr);
+        }
+        
+        // التعديل: إذا قامت كل الأرقام بالدفع لا يظهر أي شيء عدا رسالة اكتمال التحصيل
+        if (unpaidCount === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--green-success); font-weight:bold; padding:35px; font-size:16px;"><i class="fa-solid fa-square-check"></i> ممتاز! جميع الأرقام قامت بالدفع بالكامل لهذا الشهر! لا توجد مستحقات معلقة.</td></tr>`;
         }
     });
 }
@@ -331,7 +356,7 @@ function collectPayment(month, phone, total, alreadyPaid) {
 function payAllActiveInvoices() {
     const month = document.getElementById('collection-month-select').value;
     if (!month) return alert("اختر الشهر أولاً.");
-    if (confirm("هل تريد تسوية وحفظ جميع الأرقام لشهر كمدفوعة بالكامل؟")) {
+    if (confirm("هل تريد تسوية وحفظ جميع الأرقام المتبقية لشهر كمدفوعة بالكامل؟")) {
         db.ref(`invoices/${month}`).once('value', snapshot => {
             const data = snapshot.val() || {};
             let updates = {};
@@ -340,7 +365,7 @@ function payAllActiveInvoices() {
                 updates[`invoices/${month}/${phone}/status`] = "مدفوع بالكامل";
             }
             db.ref().update(updates, () => {
-                alert("تم دفع وتحصيل كافة أرقام الفاتورة بنجاح.");
+                alert("تم تحول كافة الحسابات إلى مدفوعة بالكامل.");
                 loadCollectionData();
             });
         });
@@ -395,43 +420,69 @@ function saveAdvancePayment() {
 }
 
 // ==========================================
-// [5] شاشة البحث الشامل مع ميزة التعديل والحذف الفوري
+// [5] شاشة البحث الشامل (تفعيل فلتر الشهر وتجميع أسعار الباقات)
 // ==========================================
 function executeGlobalSearch() {
-    const filter = document.getElementById('global-search-input').value.trim();
+    const filter = document.getElementById('global-search-input').value.trim().toLowerCase();
+    const selectedMonth = document.getElementById('search-month-select').value;
     const resultsArea = document.getElementById('search-results-area');
+    const summaryArea = document.getElementById('search-summary-area');
+    
     resultsArea.innerHTML = '';
+    summaryArea.innerHTML = '';
+    summaryArea.style.display = 'none';
 
     if (!filter) return alert("برجاء إدخال كلمة البحث أولاً.");
-    let matched = false;
+    
+    let matchedCount = 0;
+    let totalPackagesSum = 0;
 
     for (let phone in loadedGlobalSettings) {
         const user = loadedGlobalSettings[phone];
-        if (phone.includes(filter) || user.name.includes(filter)) {
-            matched = true;
+        const isMatch = phone.includes(filter) || user.name.toLowerCase().includes(filter);
+        
+        if (isMatch) {
+            matchedCount++;
+            // التعديل: جمع سعر الباقة الإجمالي لكل الأرقام التي تقع تحت البحث تلقائياً
+            totalPackagesSum += parseFloat(user.price) || 0;
+
             const card = document.createElement('div');
             card.className = 'card';
             card.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
                     <h3><i class="fa-solid fa-id-card text-red"></i> الاسم الحالي: ${user.name}</h3>
                     <div>
                         <button class="btn btn-outline" style="color:blue; padding:5px 10px; margin-left:5px;" onclick="openEditModal('${phone}', '${user.name}', ${user.price}, '${user.ratePlan}')"><i class="fa-solid fa-pen"></i> تعديل</button>
                         <button class="btn btn-outline" style="color:red; padding:5px 10px;" onclick="deleteUser('${phone}')"><i class="fa-solid fa-trash"></i> حذف</button>
                     </div>
                 </div>
-                <p><strong>رقم الموبايل:</strong> ${phone} | <strong>خطة الاشتراك:</strong> ${user.ratePlan || 'غير محددة'} | <strong>سعر الباقة الأساسي:</strong> ${user.price} ج.م</p>
+                <p><strong>رقم الموبايل:</strong> ${phone} | <strong>خطة الاشتراك:</strong> ${user.ratePlan || 'غير حددة'} | <strong>سعر الباقة الأساسي:</strong> ${user.price} ج.م</p>
                 <div id="history-box-${phone}" style="margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
-                     <span style="font-size:12px; color:#999;"><i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل الإجمالي الشهري ومطالبات الفواتير...</span>
+                     <span style="font-size:12px; color:#999;"><i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل السجل المالي...</span>
                 </div>
             `;
             resultsArea.appendChild(card);
-            fetchUserFinancialHistory(phone);
+            fetchUserFinancialHistory(phone, selectedMonth);
         }
     }
-    if (!matched) resultsArea.innerHTML = `<div class="card" style="text-align:center; color:red;">لا توجد أي نتائج مطابقة للبحث.</div>`;
+
+    // التعديل: عرض إجمالي أسعار الباقات المجمعة في كارت مميز بالأعلى
+    if (matchedCount > 0) {
+        summaryArea.innerHTML = `
+            <div class="card" style="background-color: #E2F6EE; border-color: var(--green-success); padding: 15px; display: flex; align-items: center; gap: 15px;">
+                <i class="fa-solid fa-calculator text-green" style="font-size: 24px;"></i>
+                <div>
+                    <span style="font-size: 13px; color: #555; display: block;">إجمالي سعر الباقة المعتمد لكافة الأرقام الناتجة عن البحث (${matchedCount} خطوط):</span>
+                    <strong style="font-size: 18px; color: var(--green-success);">${totalPackagesSum.toFixed(2)} ج.م</strong>
+                </div>
+            </div>`;
+        summaryArea.style.display = 'block';
+    } else {
+        resultsArea.innerHTML = `<div class="card" style="text-align:center; color:red; font-weight:bold;"><i class="fa-solid fa-triangle-exclamation"></i> لا توجد أي نتائج مطابقة للبحث.</div>`;
+    }
 }
 
-function fetchUserFinancialHistory(phone) {
+function fetchUserFinancialHistory(phone, selectedMonth) {
     db.ref('invoices').once('value', snapshot => {
         const months = snapshot.val() || {};
         const targetDiv = document.getElementById(`history-box-${phone}`);
@@ -439,23 +490,78 @@ function fetchUserFinancialHistory(phone) {
         
         let rows = '';
         for (let m in months) {
+            // التعديل: تفعيل فلتر اختيار الشهر المعين إذا لم يكن الخيار "all"
+            if (selectedMonth !== 'all' && m !== selectedMonth) continue;
+
             if (months[m][phone]) {
                 const inv = months[m][phone];
-                rows += `<tr><td>${m}</td><td>${inv.totalAfterTaxes} ج.م</td><td>${inv.paidAmount || 0} ج.م</td><td>${inv.paidAmount >= inv.totalAfterTaxes ? '<span class="badge badge-green">مسدد</span>':'<span class="badge badge-red">مستحق</span>'}</td></tr>`;
+                const remaining = inv.totalAfterTaxes - (inv.paidAmount || 0);
+                
+                let statusBadge = '';
+                let cancelBtnHtml = '';
+
+                if (remaining <= 0) {
+                    statusBadge = '<span class="badge badge-green">مدفوع بالكامل</span>';
+                } else if ((inv.paidAmount || 0) > 0) {
+                    statusBadge = `<span class="badge badge-orange">مدفوع جزئياً (متبقي: ${remaining.toFixed(2)})</span>`;
+                } else {
+                    statusBadge = '<span class="badge badge-red">غير مدفوع</span>';
+                }
+
+                // التعديل: إضافة إمكانية إلغاء سداد فاتورة أي رقم في شهر معين وتصفير الحساب
+                if ((inv.paidAmount || 0) > 0) {
+                    cancelBtnHtml = `<button class="btn btn-outline" style="padding:2px 8px; font-size:11px; color:var(--primary-color); border-color:var(--primary-color);" onclick="cancelPayment('${m}', '${phone}')"><i class="fa-solid fa-rotate-left"></i> إلغاء السداد</button>`;
+                } else {
+                    cancelBtnHtml = `<span style="color:#aaa; font-size:11px;">لم يسدد بعد</span>`;
+                }
+
+                rows += `
+                    <tr>
+                        <td>${m}</td>
+                        <td>${inv.totalAfterTaxes} ج.م</td>
+                        <td>${inv.paidAmount || 0} ج.م</td>
+                        <td>${statusBadge}</td>
+                        <td style="text-align: center;">${cancelBtnHtml}</td>
+                    </tr>`;
             }
         }
         
         if (rows === '') {
-            targetDiv.innerHTML = `<p style="font-size:12px; color:orange;"><i class="fa-solid fa-triangle-exclamation"></i> لا يوجد فواتير مسجلة لهذا الخط حتى الآن في النظام.</p>`;
+            targetDiv.innerHTML = `<p style="font-size:12px; color:orange;"><i class="fa-solid fa-triangle-exclamation"></i> لا توجد فواتير مسجلة لهذا الشهر المالي المفلتر.</p>`;
         } else {
             targetDiv.innerHTML = `
-                <h4 style="font-size:13px; margin-bottom:5px;">سجل مطالبات فواتير الأشهر المعتمدة:</h4>
+                <h4 style="font-size:13px; margin-bottom:5px; color:#555;">سجل مطالبات الحساب التفصيلي:</h4>
                 <table style="width:100%; font-size:12px;">
-                    <thead><tr><th>الشهر المالي</th><th>قيمة الفاتورة بالضريبة</th><th>المبلغ المدفوع</th><th>الحالة</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>الشهر المالي</th>
+                            <th>قيمة الفاتورة بالضريبة</th>
+                            <th>المبلغ المدفوع</th>
+                            <th>الحالة</th>
+                            <th style="text-align: center;">إجراءات إلغاء السداد</th>
+                        </tr>
+                    </thead>
                     <tbody>${rows}</tbody>
                 </table>`;
         }
     });
+}
+
+// التعديل: دالة إلغاء سداد فاتورة الحساب كلياً وتصفير المبالغ المالية المدفوعة
+function cancelPayment(month, phone) {
+    if (confirm(`هل أنت متأكد من إلغاء سداد فاتورة الرقم (${phone}) لشهر (${month})؟ سيتم إعادة تعيين المبلغ المدفوع ليكون (0 ج.م) وتتحول الفاتورة لحالة مستحقة.`)) {
+        db.ref(`invoices/${month}/${phone}`).update({
+            paidAmount: 0,
+            status: "غير مدفوع"
+        }, () => {
+            alert("تم إلغاء السداد بنجاح وتصفير المبالغ المدفوعة لهذا الشهر.");
+            // تحديث الشاشات النشطة فورياً طبقاً لمكان الضغط
+            if (document.getElementById('global-search-input').value) {
+                executeGlobalSearch();
+            }
+            loadCollectionData();
+        });
+    }
 }
 
 // التحكم بنوافذ التعديل العائمة
@@ -467,6 +573,7 @@ function openEditModal(phone, name, price, plan) {
     document.getElementById('edit-modal').style.display = 'flex';
 }
 
+// إغلاق المودال
 function closeEditModal() {
     document.getElementById('edit-modal').style.display = 'none';
 }
