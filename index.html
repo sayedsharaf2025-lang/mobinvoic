@@ -27,19 +27,38 @@
     <div class="main-content">
         
         <section id="search-screen" class="app-screen active-screen">
-            <h2><i class="fa-solid fa-magnifying-glass text-red"></i> الاستعلام الشامل وإدارة الحسابات</h2>
+            <h2><i class="fa-solid fa-magnifying-glass text-red"></i> الاستعلام الشامل وإدارة الحسابات والأرباح</h2>
+            
             <div class="card search-box" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
                 <input type="text" id="global-search-input" placeholder="ابحث هنا بالاسم أو الرقم لتعديل البيانات واستعراض الفواتير..." style="flex: 2; min-width: 250px;">
                 <div style="flex: 1; min-width: 160px;">
-                    <select id="search-month-select" class="form-control" style="margin: 0;">
+                    <select id="search-month-select" class="form-control" style="margin: 0;" onchange="calculateFinancialReport()">
                         <option value="all">كل الأشهر المتاحة</option>
                     </select>
                 </div>
                 <button class="btn btn-red" onclick="executeGlobalSearch()"><i class="fa-solid fa-search"></i> بحث فوري</button>
             </div>
+
+            <div class="card" id="financial-report-card" style="margin-top: 15px; border-top: 4px solid var(--green-success);">
+                <h3 style="margin-bottom: 15px;"><i class="fa-solid fa-chart-line text-green"></i> لوحة حساب الأرباح والتقرير المالي العام</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
+                    <div class="form-group" style="margin:0;">
+                        <label style="font-size: 12px; font-weight: 600; color: #444;">إجمالي الفاتورة من فودافون (يدوياً للمقارنة)</label>
+                        <input type="number" id="manual-invoice-input" class="form-control" placeholder="أدخل القيمة لمقارنتها بالإكسيل" oninput="calculateFinancialReport()">
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label style="font-size: 12px; font-weight: 600; color: #444;">مبالغ إضافية تحصيلية (إيرادات إضافية للحساب)</label>
+                        <input type="number" id="additional-revenue-input" class="form-control" placeholder="0.00" oninput="calculateFinancialReport()">
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label style="font-size: 12px; font-weight: 600; color: #444;">مصاريف/دمغات إضافية (تضاف لتكلفة الفاتورة)</label>
+                        <input type="number" id="additional-expenses-input" class="form-control" placeholder="0.00" oninput="calculateFinancialReport()">
+                    </div>
+                </div>
+                <div id="financial-report-results" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-top: 15px;"></div>
+            </div>
             
             <div id="search-summary-area" style="display: none; margin-bottom: 20px;"></div>
-            
             <div id="search-results-area" style="margin-top: 20px;"></div>
         </section>
 
@@ -94,7 +113,7 @@
         </section>
 
         <section id="collection-screen" class="app-screen">
-            <h2><i class="fa-solid fa-money-bill-wave text-red"></i> شاشة التحصيل المالي والسداد (المستحقات المعلقة)</h2>
+            <h2><i class="fa-solid fa-money-bill-wave text-red"></i> شاشة التحصيل المالي والسداد (على سعر الباقة المعتمد)</h2>
             <div class="card filter-box">
                 <div class="form-group" style="flex: 1; margin: 0 10px;">
                     <label>اختر شهر الاستحقاق الفعلي</label>
@@ -110,11 +129,11 @@
                             <tr>
                                 <th>الرقم</th>
                                 <th>الاسم</th>
-                                <th>سعر الباقة الأثاثي</th>
-                                <th>الفاتورة الفعلية</th>
+                                <th>سعر الباقة المعتمد</th>
+                                <th>الفاتورة الفعلية (إكسيل)</th>
                                 <th>المدفوع حتى الآن</th>
-                                <th>حالة الحساب</th>
-                                <th>إجراءات السداد الجزئي / إلغاء الدفع</th>
+                                <th>المطلوب والحالة</th>
+                                <th>إجراءات السداد / تعديل الحساب لتصفيره</th>
                             </tr>
                         </thead>
                         <tbody id="collection-table-body"></tbody>
