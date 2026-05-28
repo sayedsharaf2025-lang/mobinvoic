@@ -1,4 +1,6 @@
-// تكوين بيانات قاعدة بيانات Firebase الخاصة بك
+// ==========================================
+// [0] تكوين وبيانات قاعدة بيانات Firebase
+// ==========================================
 const firebaseConfig = {
     apiKey: "AIzaSyBfFRxvmhg8aqtuDgXAOofFGpVPklUF-gs",
     authDomain: "mobile-invoic-118d4.firebaseapp.com",
@@ -28,6 +30,9 @@ function formatPhoneNumber(num) {
     return s;
 }
 
+// ==========================================
+// [1] التحكم في التنقل والأحداث الرئيسية بالتحميل
+// ==========================================
 document.addEventListener("DOMContentLoaded", function() {
     // محرك التنقل بين الشاشات الخمس بمرونة (SPA)
     const links = document.querySelectorAll('.sidebar .nav-links li');
@@ -43,9 +48,22 @@ document.addEventListener("DOMContentLoaded", function() {
             document.getElementById(target).classList.add('active-screen');
             
             if (target === 'settings-screen') loadSettingsTable();
+            if (target === 'collection-screen') loadCollectionData();
             updateInvoiceMonthsDropdowns();
         });
     });
+
+    // ربط حدث تغيير الشهر في شاشة البحث والتقرير لتحميل الإيرادات والمصاريف المحفوظة تلقائياً
+    const searchSelect = document.getElementById('search-month-select');
+    if (searchSelect) {
+        searchSelect.addEventListener('change', loadExtraFinancialsForSelectedMonth);
+    }
+
+    // ربط حدث تغيير الشهر في شاشة التحصيل لتحديث الجدول فورياً
+    const collSelect = document.getElementById('collection-month-select');
+    if (collSelect) {
+        collSelect.addEventListener('change', loadCollectionData);
+    }
 
     syncGlobalSettings();
     updateInvoiceMonthsDropdowns();
@@ -60,7 +78,7 @@ function syncGlobalSettings() {
 }
 
 // ==========================================
-// [1] شاشة الإعدادات واستيراد الأفراد والباقات
+// [2] شاشة الإعدادات واستيراد الأفراد والباقات
 // ==========================================
 function handleSettingsImport(e) {
     const file = e.target.files[0];
@@ -153,13 +171,14 @@ function deleteUser(phone) {
         db.ref('settings/' + phone).remove(() => {
             loadSettingsTable();
             if(document.getElementById('global-search-input').value) executeGlobalSearch();
+            loadCollectionData();
             calculateFinancialReport();
         });
     }
 }
 
 // ==========================================
-// [2] شاشة استيراد ومعالجة الفواتير (إصلاح مشكلة التداخل)
+// [3] شاشة استيراد ومعالجة الفواتير الشهرية
 // ==========================================
 function handleInvoiceImport(e) {
     const file = e.target.files[0];
@@ -200,7 +219,7 @@ function processInvoiceExcel(data) {
             if (matchedUser) {
                 statusBadge = `<span class="badge badge-green"><i class="fa-solid fa-circle-check"></i> مسجل باسم: ${matchedUser.name}</span>`;
             } else {
-                statusBadge = `<span class="badge badge-orange"><i class="fa-solid fa-circle-exclamation"></i> رقم جديد (سينزل بدون اسم للتعديل لاحقاً)</span>`;
+                statusBadge = `<span class="badge badge-orange"><i class="fa-solid fa-circle-exclamation"></i> رقم جديد (سينزل بدون اسم لتسعيره لاحقاً)</span>`;
             }
 
             currentParsedInvoice.push({
@@ -245,7 +264,7 @@ function saveProcessedInvoice() {
         });
     });
 
-    alert(`تم بنجاح اعتماد وحفظ فاتورة شهر (${month}) بالكامل.`);
+    alert(`تم بنجاح اعتماد وحفظ فاتورة شهر (${month}) بالكامل لعمليات جرد الأرباح والمتابعة.`);
     
     currentParsedInvoice = [];
     document.getElementById('invoice-file-input').value = '';
@@ -270,7 +289,8 @@ function updateInvoiceMonthsDropdowns() {
             if (collSelect) collSelect.innerHTML += `<option value="${m}">${m}</option>`;
             if (searchSelect) searchSelect.innerHTML += `<option value="${m}">${m}</option>`;
         }
-        calculateFinancialReport();
+        
+        loadExtraFinancialsForSelectedMonth();
     });
 }
 
@@ -287,7 +307,7 @@ function deleteStoredInvoice() {
 }
 
 // ==========================================
-// [3] شاشة التحصيل المالي (تعديل: الدفع بالباقة + تنبيه العجز وقفل السطر)
+// [4] شاشة التحصيل المالي (الرقابة الذكية والمديونية والـ 9 جنيهات)
 // ==========================================
 function loadCollectionData() {
     const month = document.getElementById('collection-month-select').value;
@@ -297,36 +317,55 @@ function loadCollectionData() {
 
     db.ref(`invoices/${month}`).once('value', snapshot => {
         const invoices = snapshot.val() || {};
-        let unpaidCount = 0;
+        let activeRowsCount = 0;
 
         for (let phone in invoices) {
             const inv = invoices[phone];
             const user = loadedGlobalSettings[phone] || { name: "بدون اسم", price: 0 };
             
             const paid = inv.paidAmount || 0;
-            const hasAlert = user.price < inv.totalAfterTaxes; // التنبيه: الباقة المعتمدة أقل من الفاتورة المرفوعة
+            const requiredAmount = user.price; // السعر المعتمد للباقة
+            const remaining = requiredAmount - paid; // المتبقي كمديونية
 
-            // تحديد المبلغ المطلوب بناءً على حال التنبيه لضمان عدم اختفاء السطر إلا بعد الإجراء
-            let requiredAmount = hasAlert ? inv.totalAfterTaxes : user.price;
-            let remaining = requiredAmount - paid;
-            
-            if (remaining <= 0) continue; // يختفي الخط تماماً عند اكتمال السداد المطلوب للشرطين
+            const invoiceAmt = parseFloat(inv.totalAfterTaxes) || 0;
+            const packageAmt = parseFloat(user.price) || 0;
+            const diffAmt = packageAmt - invoiceAmt; // صافي الفرق قبل التحصيل
 
-            unpaidCount++;
+            // الشرط الصارم الصادر منك: الفاتورة أعلى أو تساوي الباقة، أو الفارق 9 جنيه تقريباً (من 8.4 إلى 9.6 للكسور)
+            const isTargetForReview = (invoiceAmt >= packageAmt || (diffAmt >= 8.4 && diffAmt <= 9.6));
             
-            let statusHtml = '';
-            let rowStyle = '';
+            // شرط الاختفاء عند التسوية: يختفي فقط إذا تم السداد بالكامل ولم يكن هناك تنبيه مراجعة أو عجز معلق
+            if (packageAmt > 0 && remaining <= 0 && !isTargetForReview) continue; 
+
+            activeRowsCount++;
             
-            if (hasAlert) {
-                rowStyle = 'style="background-color: #fff4ee; border-right: 4px solid orange;"';
-                statusHtml = `
-                    <span class="badge badge-red">المستحق (الفاتورة): ${remaining.toFixed(2)} ج.م</span>
-                    <div style="color: #d97706; font-size:11px; font-weight:bold; margin-top:4px; line-height:1.3;">
-                        ⚠️ تنبيه: الباقة المعتمدة (${user.price}) أقل من الفاتورة (${inv.totalAfterTaxes})! قم بتعديل الباقة أو سدد يدويًا كامل قيمة الفاتورة.
-                    </div>`;
-            } else {
-                statusHtml = `<span class="badge badge-red">متبقي من الباقة: ${remaining.toFixed(2)} ج.م</span>`;
+            let rowBgColor = ''; 
+            let comparisonHtml = '';
+            
+            if (packageAmt === 0) {
+                rowBgColor = 'background-color: #f3f4f6; border-right: 4px solid #6b7280;'; 
+                comparisonHtml = `<div style="color: #6b7280; font-size:11px; font-weight:bold;"><i class="fa-solid fa-circle-question"></i> خط غير مسعر (باقته 0 ج.م)</div>`;
+            } else if (isTargetForReview) {
+                // تلوين السطر باللون الأحمر التنبيهي ليبقى ظاهراً لحين اتخاذ إجراء التعديل للباقة
+                rowBgColor = 'background-color: #fef2f2; border-right: 4px solid #dc2626;'; 
+                if (invoiceAmt >= packageAmt) {
+                    comparisonHtml = `<div style="color: #dc2626; font-size:11px; font-weight:bold; margin-top:3px;"><i class="fa-solid fa-triangle-exclamation"></i> تنبيه: الفاتورة أعلى أو تساوي الباقة (تعديل السعر مطلوب) ⚠️</div>`;
+                } else {
+                    comparisonHtml = `<div style="color: #b91c1c; font-size:11px; font-weight:bold; margin-top:3px;"><i class="fa-solid fa-circle-exclamation"></i> مراجعة: الفارق 9 جنيه تقريباً (تثبيت أو تعديل الباقة) ⚠️</div>`;
+                }
+            } else if (diffAmt > 0) {
+                rowBgColor = 'background-color: #f0fdf4; border-right: 4px solid #16a34a;'; 
+                comparisonHtml = `<div style="color: #16a34a; font-size:11px; font-weight:bold; margin-top:3px;"><i class="fa-solid fa-circle-check"></i> الباقة رابحة أعلى من الفاتورة بـ (${diffAmt.toFixed(2)} ج.م) ✨</div>`;
             }
+            
+            // منظومة المديونية (مدين مديونية معلقة في حالة الدفع الجزئي)
+            let statusHtml = '';
+            if (remaining > 0) {
+                statusHtml = `<span class="badge badge-red" style="font-weight:bold;"><i class="fa-solid fa-hand-holding-dollar"></i> مدين مديونية: ${remaining.toFixed(2)} ج.م</span>`;
+            } else {
+                statusHtml = `<span class="badge badge-green"><i class="fa-solid fa-square-check"></i> مسدد للباقة بالكامل</span>`;
+            }
+            statusHtml += `${comparisonHtml}`;
             
             let cancelBtn = '';
             if (paid > 0) {
@@ -334,74 +373,107 @@ function loadCollectionData() {
             }
 
             const tr = document.createElement('tr');
-            if (rowStyle) tr.setAttribute('style', 'background-color: #fff3cd;');
+            if (rowBgColor) tr.setAttribute('style', rowBgColor);
             
             tr.innerHTML = `
                 <td>${phone}</td>
                 <td><strong>${user.name}</strong></td>
-                <td><strong class="text-green">${user.price} ج.م</strong></td>
-                <td>${inv.totalAfterTaxes} ج.م</td>
+                <td><strong class="text-blue">${packageAmt} ج.م</strong></td>
+                <td>${invoiceAmt} ج.م</td>
                 <td>${paid} ج.م</td>
                 <td>${statusHtml}</td>
                 <td>
-                    <input type="number" id="pay-amt-${phone}" value="${remaining.toFixed(2)}" class="form-control" style="width:75px; display:inline-block; padding:4px;">
-                    <button class="btn btn-green" style="padding:5px 10px;" onclick="collectPayment('${month}', '${phone}', ${requiredAmount}, ${paid})">تسجيل</button>
-                    <button class="btn btn-outline" style="padding:5px 10px; color:blue;" onclick="openEditModal('${phone}', '${user.name}', ${user.price}, '${user.ratePlan || ''}')"><i class="fa-solid fa-pen"></i> تعديل الباقة</button>
+                    <input type="number" id="pay-amt-${phone}" value="${remaining > 0 ? remaining.toFixed(2) : 0}" class="form-control" style="width:75px; display:inline-block; padding:4px;">
+                    <button class="btn btn-green" style="padding:5px 10px;" onclick="collectCustomPayment('${month}', '${phone}', ${requiredAmount}, ${paid})">تسجيل</button>
+                    <button class="btn btn-outline" style="padding:5px 10px; color:blue;" onclick="openEditModal('${phone}', '${user.name}', ${packageAmt}, '${user.ratePlan || ''}')"><i class="fa-solid fa-pen"></i> تعديل الباقة</button>
                     ${cancelBtn}
                 </td>
             `;
             tbody.appendChild(tr);
         }
         
-        if (unpaidCount === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--green-success); font-weight:bold; padding:35px; font-size:16px;"><i class="fa-solid fa-square-check"></i> ممتاز! جميع الأرقام قامت بالدفع بالكامل لهذا الشهر! لا توجد مستحقات معلقة.</td></tr>`;
+        if (activeRowsCount === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--green-success); font-weight:bold; padding:35px; font-size:16px;"><i class="fa-solid fa-square-check"></i> ممتاز! تمت تسوية كل الحسابات المتاحة ولا توجد مديونيات أو خطوط مراجعة معلقة لهذا الشهر!</td></tr>`;
         }
     });
 }
 
-function collectPayment(month, phone, requiredTotal, alreadyPaid) {
+// دالة الدفع الجماعي المعدلة لاستثناء خطوط العجز وفارق الـ 9 جنيهات
+function payAllActiveInvoices() {
+    const month = document.getElementById('collection-month-select').value;
+    if (!month) return alert("اختر الشهر أولاً.");
+    
+    if (confirm("هل تريد تسوية الحسابات الآمنة تلقائياً؟\n\n⚠️ ملاحظة: النظام سيستثني تلقائياً ويترك باللون الأحمر الحسابات التي تعاني من عجز (الفاتورة أعلى أو تساوي الباقة) أو الفارق بينهما 9 جنيهات لمراجعتها وتعديل باقتها يدوياً.")) {
+        db.ref(`invoices/${month}`).once('value', snapshot => {
+            const data = snapshot.val() || {};
+            let updates = {};
+            let skippedCount = 0;
+            let processedCount = 0;
+
+            for (let phone in data) {
+                const inv = data[phone];
+                const user = loadedGlobalSettings[phone] || { price: 0 };
+                
+                const invoiceAmt = parseFloat(inv.totalAfterTaxes) || 0;
+                const packageAmt = parseFloat(user.price) || 0;
+                const diffAmt = packageAmt - invoiceAmt;
+
+                // حظر الحسابات المستهدفة بالمراجعة لتبقى باللون الأحمر ولا تختفي
+                if (invoiceAmt >= packageAmt || (diffAmt >= 8.4 && diffAmt <= 9.6)) {
+                    skippedCount++;
+                    continue; 
+                }
+
+                const paid = inv.paidAmount || 0;
+                if (paid < packageAmt) {
+                    updates[`invoices/${month}/${phone}/paidAmount`] = packageAmt;
+                    updates[`invoices/${month}/${phone}/status`] = "مدفوع بالكامل";
+                    processedCount++;
+                }
+            }
+
+            if (Object.keys(updates).length > 0) {
+                db.ref().update(updates, () => {
+                    let msg = `تم تسوية وتحصيل عدد (${processedCount}) خط آمن بنجاح.`;
+                    if (skippedCount > 0) {
+                        msg += `\n\n⚠️ تم الإبقاء على عدد (${skippedCount}) خط باللون الأحمر لوجود عجز مالي أو فارق 9ج، لتتخذ معها إجراءً بتعديل أسعار الباقات المعتمدة.`;
+                    }
+                    alert(msg);
+                    loadCollectionData();
+                    calculateFinancialReport();
+                });
+            } else {
+                alert(`لم يتم تحصيل أي خط جماعياً. جميع الخطوط المتبقية (${skippedCount}) مستثناة لوجود تنبيهات أسعار أو تم سدادها بالكامل سابقاً.`);
+            }
+        });
+    }
+}
+
+// تسجيل دفع جزئي مخصص مع إبقاء المتبقي دين مدين على صاحب الخط
+function collectCustomPayment(month, phone, requiredTotal, alreadyPaid) {
     const amt = parseFloat(document.getElementById(`pay-amt-${phone}`).value);
-    if (isNaN(amt) || amt <= 0) return alert("برجاء إدخال قيمة صحيحة.");
+    if (isNaN(amt) || amt < 0) return alert("برجاء إدخال قيمة صحيحة وموجبة.");
 
     const newPaid = alreadyPaid + amt;
+    const netDebt = requiredTotal - newPaid;
+
     db.ref(`invoices/${month}/${phone}`).update({
         paidAmount: newPaid,
-        status: newPaid >= requiredTotal ? "مدفوع بالكامل" : "مدفوع جزئياً"
+        status: netDebt <= 0 ? "مدفوع بالكامل" : "مدفوع جزئياً"
     }, () => {
-        alert("تم تسجيل دفعة التحصيل بنجاح!");
+        if (netDebt > 0) {
+            alert(`تم تسجيل دفع جزئي بقيمة (${amt} ج.م).\nالفرق المتبقي وقدره (${netDebt.toFixed(2)} ج.م) تم ترحيله وإبقائه كـ "مدين مديونية معلقة" على صاحب الخط بنجاح.`);
+        } else {
+            alert("تم تسوية الحساب بالكامل وإغلاق المديونية لهذا الشهر.");
+        }
         loadCollectionData();
         if (document.getElementById('global-search-input').value) executeGlobalSearch();
         calculateFinancialReport();
     });
 }
 
-function payAllActiveInvoices() {
-    const month = document.getElementById('collection-month-select').value;
-    if (!month) return alert("اختر الشهر أولاً.");
-    if (confirm("هل تريد تسوية وحفظ جميع الأرقام المتبقية لشهر كمدفوعة بالكامل طبقاً للمستحق الفعلي؟")) {
-        db.ref(`invoices/${month}`).once('value', snapshot => {
-            const data = snapshot.val() || {};
-            let updates = {};
-            for (let phone in data) {
-                const inv = data[phone];
-                const user = loadedGlobalSettings[phone] || { price: 0 };
-                // السداد الإجمالي يسدد القيمة المطلوبة أيهما أكبر لحل التنبيهات تلقائياً
-                const required = user.price < inv.totalAfterTaxes ? inv.totalAfterTaxes : user.price;
-                
-                updates[`invoices/${month}/${phone}/paidAmount`] = required;
-                updates[`invoices/${month}/${phone}/status`] = "مدفوع بالكامل";
-            }
-            db.ref().update(updates, () => {
-                alert("تم تحويل كافة الحسابات إلى مدفوعة بالكامل.");
-                loadCollectionData();
-                calculateFinancialReport();
-            });
-        });
-    }
-}
-
 // ==========================================
-// [4] شاشة الدفع المقدم والتحكم في الرصيد
+// [5] شاشة الدفع المقدم والتحكم في الرصيد
 // ==========================================
 function searchForAdvance() {
     const filter = document.getElementById('advance-search-input').value.trim();
@@ -448,8 +520,54 @@ function saveAdvancePayment() {
 }
 
 // ==========================================
-// [5] شاشة البحث الشامل وحساب الأرباح التلقائي واليدوي
+// [6] شاشة البحث الشامل وحفظ الحسابات الإضافية والتقرير المالي المحترف
 // ==========================================
+function saveExtraFinancials() {
+    const selectedMonth = document.getElementById('search-month-select').value;
+    if (!selectedMonth || selectedMonth === 'all') {
+        return alert("⚠️ يرجى اختيار شهر محدد من القائمة لحفظ المدخلات اليدوية الخاصة به. لا يمكن الحفظ على وضع 'كل الأشهر'.");
+    }
+
+    const manualInvoiceInput = parseFloat(document.getElementById('manual-invoice-input').value) || 0;
+    const additionalRevenue = parseFloat(document.getElementById('additional-revenue-input').value) || 0;
+    const additionalExpenses = parseFloat(document.getElementById('additional-expenses-input').value) || 0;
+
+    db.ref(`extraFinancials/${selectedMonth}`).set({
+        manualInvoice: manualInvoiceInput,
+        additionalRevenue: additionalRevenue,
+        additionalExpenses: additionalExpenses
+    }, (error) => {
+        if (error) {
+            alert("حدث خطأ أثناء حفظ البيانات المالية!");
+        } else {
+            alert(`✨ تم بنجاح حفظ الإيرادات والمصاريف المضافة لشهر (${selectedMonth}) وتثبيت الأرباح بقاعدة البيانات.`);
+            calculateFinancialReport();
+        }
+    });
+}
+
+function loadExtraFinancialsForSelectedMonth() {
+    const selectedMonth = document.getElementById('search-month-select').value;
+    
+    if (!selectedMonth || selectedMonth === 'all') {
+        document.getElementById('manual-invoice-input').value = 0;
+        document.getElementById('additional-revenue-input').value = 0;
+        document.getElementById('additional-expenses-input').value = 0;
+        calculateFinancialReport();
+        return;
+    }
+
+    db.ref(`extraFinancials/${selectedMonth}`).once('value', snapshot => {
+        const extra = snapshot.val() || { manualInvoice: 0, additionalRevenue: 0, additionalExpenses: 0 };
+        
+        document.getElementById('manual-invoice-input').value = extra.manualInvoice || 0;
+        document.getElementById('additional-revenue-input').value = extra.additionalRevenue || 0;
+        document.getElementById('additional-expenses-input').value = extra.additionalExpenses || 0;
+        
+        calculateFinancialReport();
+    });
+}
+
 function calculateFinancialReport() {
     const selectedMonth = document.getElementById('search-month-select').value;
     const reportResults = document.getElementById('financial-report-results');
@@ -461,7 +579,6 @@ function calculateFinancialReport() {
         let totalExcelInvoices = 0;
         let totalApprovedPackages = 0;
 
-        // تجميع الحسابات بناءً على الشهر المختار أو جميع الأشهر المتاحة
         for (let m in allInvoices) {
             if (selectedMonth !== 'all' && m !== selectedMonth) continue;
             
@@ -475,17 +592,14 @@ function calculateFinancialReport() {
             }
         }
 
-        // جلب قيم الخانات اليدوية والمصاريف المضافة حديثاً
         const manualInvoiceInput = parseFloat(document.getElementById('manual-invoice-input').value) || 0;
         const additionalRevenue = parseFloat(document.getElementById('additional-revenue-input').value) || 0;
         const additionalExpenses = parseFloat(document.getElementById('additional-expenses-input').value) || 0;
 
-        // الحساب النهائي الشامل
         const finalTotalPackages = totalApprovedPackages + additionalRevenue;
         const finalTotalInvoice = totalExcelInvoices + additionalExpenses;
         const netProfit = finalTotalPackages - finalTotalInvoice;
 
-        // منطق المقارنة الذكي مع الفاتورة اليدوية المدخلة
         let comparisonBadge = '';
         if (manualInvoiceInput > 0) {
             const difference = manualInvoiceInput - totalExcelInvoices;
@@ -498,23 +612,22 @@ function calculateFinancialReport() {
             }
         }
 
-        // حقن الكروت المالية الحية في واجهة المستخدم بأسلوب عصري
         reportResults.innerHTML = `
             <div style="background: #ffffff; padding: 15px; border-radius: 8px; border-right: 5px solid #2563eb; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <span style="font-size: 11px; color: #666; display: block; font-weight: bold;">إجمالي الباقات (+ الإيرادات الإضافية)</span>
+                <span style="font-size: 11px; color: #666; display: block; font-weight: bold;">إجمالي الباقات المسعرة (+ إيراد إضافي)</span>
                 <strong style="font-size: 18px; color: #2563eb; display:block; margin-top:5px;">${finalTotalPackages.toFixed(2)} ج.م</strong>
                 <small style="font-size: 10px; color:#888;">الأساسي من الدليل: ${totalApprovedPackages.toFixed(2)}</small>
             </div>
             <div style="background: #ffffff; padding: 15px; border-radius: 8px; border-right: 5px solid #dc2626; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <span style="font-size: 11px; color: #666; display: block; font-weight: bold;">إجمالي الفاتورة المرفوعة (+ المصاريف)</span>
+                <span style="font-size: 11px; color: #666; display: block; font-weight: bold;">إجمالي فواتير فودافون المرفوعة (+ مصاريف)</span>
                 <strong style="font-size: 18px; color: #dc2626; display:block; margin-top:5px;">${finalTotalInvoice.toFixed(2)} ج.م</strong>
                 <small style="font-size: 10px; color:#888;">من ملف إكسيل: ${totalExcelInvoices.toFixed(2)}</small>
                 ${comparisonBadge}
             </div>
             <div style="background: ${netProfit >= 0 ? '#f0fdf4' : '#fef2f2'}; padding: 15px; border-radius: 8px; border-right: 5px solid ${netProfit >= 0 ? '#16a34a' : '#dc2626'}; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <span style="font-size: 11px; color: #666; display: block; font-weight: bold;">صافي الأرباح المتوقعة لشهر الحساب</span>
+                <span style="font-size: 11px; color: #666; display: block; font-weight: bold;">صافي أرباح الحساب التراكمية</span>
                 <strong style="font-size: 21px; color: ${netProfit >= 0 ? '#16a34a' : '#dc2626'}; display:block; margin-top:3px;">${netProfit.toFixed(2)} ج.م</strong>
-                <span style="font-size: 10px; font-weight:bold; color: ${netProfit >= 0 ? '#16a34a' : '#dc2626'};">${netProfit >= 0 ? '📈 صافي ربح إيجابي' : '📉 عجز / خسارة مالية'}</span>
+                <span style="font-size: 10px; font-weight:bold; color: ${netProfit >= 0 ? '#16a34a' : '#dc2626'};">${netProfit >= 0 ? '📈 صافي ربح إيجابي' : '📉 عجز مالي بالخلفية'}</span>
             </div>
         `;
     });
@@ -547,13 +660,13 @@ function executeGlobalSearch() {
             card.className = 'card';
             card.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
-                    <h3><i class="fa-solid fa-id-card text-red"></i> الاسم الحالي: ${user.name}</h3>
+                    <h3><i class="fa-solid fa-id-card text-red"></i> المشترك: ${user.name}</h3>
                     <div>
                         <button class="btn btn-outline" style="color:blue; padding:5px 10px; margin-left:5px;" onclick="openEditModal('${phone}', '${user.name}', ${user.price}, '${user.ratePlan}')"><i class="fa-solid fa-pen"></i> تعديل البيانات</button>
                         <button class="btn btn-outline" style="color:red; padding:5px 10px;" onclick="deleteUser('${phone}')"><i class="fa-solid fa-trash"></i> حذف</button>
                     </div>
                 </div>
-                <p><strong>رقم الموبايل:</strong> ${phone} | <strong>خطة الاشتراك:</strong> ${user.ratePlan || 'غير حددة'} | <strong>سعر الباقة الأساسي:</strong> ${user.price} ج.م</p>
+                <p><strong>رقم الموبايل:</strong> ${phone} | <strong>الخطة الأساسية:</strong> ${user.ratePlan || 'غير محدد'} | <strong>سعر الباقة المعتمد للدفع:</strong> <span class="text-green">${user.price} ج.م</span></p>
                 <div id="history-box-${phone}" style="margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
                      <span style="font-size:12px; color:#999;"><i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل السجل المالي...</span>
                 </div>
@@ -568,7 +681,7 @@ function executeGlobalSearch() {
             <div class="card" style="background-color: #E2F6EE; border-color: var(--green-success); padding: 15px; display: flex; align-items: center; gap: 15px;">
                 <i class="fa-solid fa-calculator text-green" style="font-size: 24px;"></i>
                 <div>
-                    <span style="font-size: 13px; color: #555; display: block;">إجمالي سعر الباقة المعتمد للأرقام الناتجة عن البحث الحالية (${matchedCount} خطوط):</span>
+                    <span style="font-size: 13px; color: #555; display: block;">إجمالي قيمة الباقات المعتمدة للمشتركين الظاهرين بالبحث الحالية (${matchedCount} خطوط):</span>
                     <strong style="font-size: 18px; color: var(--green-success);">${totalPackagesSum.toFixed(2)} ج.م</strong>
                 </div>
             </div>`;
@@ -591,13 +704,13 @@ function fetchUserFinancialHistory(phone, selectedMonth) {
             if (months[m][phone]) {
                 const inv = months[m][phone];
                 const user = loadedGlobalSettings[phone] || { price: 0 };
-                const remaining = user.price < inv.totalAfterTaxes ? (inv.totalAfterTaxes - (inv.paidAmount || 0)) : (user.price - (inv.paidAmount || 0));
+                const remaining = user.price - (inv.paidAmount || 0);
                 
                 let statusBadge = '';
                 let cancelBtnHtml = '';
 
                 if (remaining <= 0) {
-                    statusBadge = '<span class="badge badge-green">مدفوع بالكامل</span>';
+                    statusBadge = '<span class="badge badge-green">تم سداد الباقة بالكامل</span>';
                 } else if ((inv.paidAmount || 0) > 0) {
                     statusBadge = `<span class="badge badge-orange">مدفوع جزئياً (متبقي: ${remaining.toFixed(2)})</span>`;
                 } else {
@@ -613,7 +726,7 @@ function fetchUserFinancialHistory(phone, selectedMonth) {
                 rows += `
                     <tr>
                         <td>${m}</td>
-                        <td>${inv.totalAfterTaxes} ج.م</td>
+                        <td>${user.price} ج.م (الباقة)</td>
                         <td>${inv.paidAmount || 0} ج.م</td>
                         <td>${statusBadge}</td>
                         <td style="text-align: center;">${cancelBtnHtml}</td>
@@ -625,14 +738,14 @@ function fetchUserFinancialHistory(phone, selectedMonth) {
             targetDiv.innerHTML = `<p style="font-size:12px; color:orange;"><i class="fa-solid fa-triangle-exclamation"></i> لا توجد فواتير مسجلة لهذا الرقم في النطاق المفلتر.</p>`;
         } else {
             targetDiv.innerHTML = `
-                <h4 style="font-size:13px; margin-bottom:5px; color:#555;">سجل مطالبات الحساب التفصيلي:</h4>
+                <h4 style="font-size:13px; margin-bottom:5px; color:#555;">سجل مطالبات باقة الحساب:</h4>
                 <table style="width:100%; font-size:12px;">
                     <thead>
                         <tr>
                             <th>الشهر المالي</th>
-                            <th>قيمة الفاتورة بالضريبة</th>
-                            <th>المبلغ المدفوع</th>
-                            <th>الحالة</th>
+                            <th>قيمة الباقة المعتمدة</th>
+                            <th>المبلغ المدفوع فعلياً</th>
+                            <th>حالة السداد للعميل</th>
                             <th style="text-align: center;">إجراءات إلغاء السداد</th>
                         </tr>
                     </thead>
@@ -643,7 +756,7 @@ function fetchUserFinancialHistory(phone, selectedMonth) {
 }
 
 function cancelPayment(month, phone) {
-    if (confirm(`هل أنت متأكد من إلغاء سداد فاتورة الرقم (${phone}) لشهر (${month})؟ سيتم تصفير المبلغ المدفوع وإعادة الحساب لوضع الاستحقاق المعلق.`)) {
+    if (confirm(`هل أنت متأكد من إلغاء سداد فاتورة الرقم (${phone}) لشهر (${month})؟ سيتم تصفير المبلغ المدفوع وإعادة الحساب لوضع الاستحقاق المعلق للباقة.`)) {
         db.ref(`invoices/${month}/${phone}`).update({
             paidAmount: 0,
             status: "غير مدفوع"
@@ -656,7 +769,9 @@ function cancelPayment(month, phone) {
     }
 }
 
-// التحكم بنوافذ التعديل العائمة
+// ==========================================
+// [7] النوافذ المنبثقة (Modals) لتعديل وحفظ بيانات العميل
+// ==========================================
 function openEditModal(phone, name, price, plan) {
     document.getElementById('edit-name').value = name;
     document.getElementById('edit-phone').value = phone;
@@ -679,7 +794,7 @@ function saveClientEdits() {
         alert("تم تعديل وحفظ بيانات العميل وتحديث الأرباح فورياً!");
         closeEditModal();
         loadSettingsTable();
-        loadCollectionData(); // إعادة تحميل التحصيل لتحديث حالة التنبيه إذا تم حلها
+        loadCollectionData(); 
         if(document.getElementById('global-search-input').value) executeGlobalSearch();
         calculateFinancialReport();
     });
