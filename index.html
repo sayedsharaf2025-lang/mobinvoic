@@ -32,7 +32,7 @@
             <div class="card search-box" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
                 <input type="text" id="global-search-input" placeholder="ابحث هنا بالاسم أو الرقم لتعديل البيانات واستعراض الفواتير..." style="flex: 2; min-width: 250px;">
                 <div style="flex: 1; min-width: 160px;">
-                    <select id="search-month-select" class="form-control" style="margin: 0;" onchange="calculateFinancialReport()">
+                    <select id="search-month-select" class="form-control" style="margin: 0;">
                         <option value="all">كل الأشهر المتاحة</option>
                     </select>
                 </div>
@@ -44,17 +44,22 @@
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
                     <div class="form-group" style="margin:0;">
                         <label style="font-size: 12px; font-weight: 600; color: #444;">إجمالي الفاتورة من فودافون (يدوياً للمقارنة)</label>
-                        <input type="number" id="manual-invoice-input" class="form-control" placeholder="أدخل القيمة لمقارنتها بالإكسيل" oninput="calculateFinancialReport()">
+                        <input type="number" id="manual-invoice-input" class="form-control" placeholder="أدخل القيمة لمقارنتها بالإكسيل">
                     </div>
                     <div class="form-group" style="margin:0;">
                         <label style="font-size: 12px; font-weight: 600; color: #444;">مبالغ إضافية تحصيلية (إيرادات إضافية للحساب)</label>
-                        <input type="number" id="additional-revenue-input" class="form-control" placeholder="0.00" oninput="calculateFinancialReport()">
+                        <input type="number" id="additional-revenue-input" class="form-control" placeholder="0.00">
                     </div>
                     <div class="form-group" style="margin:0;">
                         <label style="font-size: 12px; font-weight: 600; color: #444;">مصاريف/دمغات إضافية (تضاف لتكلفة الفاتورة)</label>
-                        <input type="number" id="additional-expenses-input" class="form-control" placeholder="0.00" oninput="calculateFinancialReport()">
+                        <input type="number" id="additional-expenses-input" class="form-control" placeholder="0.00">
                     </div>
                 </div>
+
+                <button class="btn btn-green" id="save-financials-btn" onclick="saveExtraFinancials()" style="margin-top: 10px; margin-bottom: 15px; width: 100%;">
+                    <i class="fa-solid fa-floppy-disk"></i> حفظ الحسابات الإضافية والأرباح لهذا الشهر
+                </button>
+
                 <div id="financial-report-results" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-top: 15px;"></div>
             </div>
             
@@ -117,7 +122,7 @@
             <div class="card filter-box">
                 <div class="form-group" style="flex: 1; margin: 0 10px;">
                     <label>اختر شهر الاستحقاق الفعلي</label>
-                    <select id="collection-month-select" class="form-control" onchange="loadCollectionData()"></select>
+                    <select id="collection-month-select" class="form-control"></select>
                 </div>
                 <button class="btn btn-green" onclick="payAllActiveInvoices()"><i class="fa-solid fa-check-double"></i> تحصيل وسداد كل الأرقام المتبقية معاً</button>
             </div>
