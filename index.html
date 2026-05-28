@@ -3,76 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>منظومة إدارة فواتير المحمول</title>
+    <title>منظومة إدارة فواتير فودافون</title>
+    <!-- خط Cairo العصري -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- مكتبة الأيقونات FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
+    <!-- الشريط الجانبي للتنقل المستوحى من فودافون -->
     <div class="sidebar">
         <div class="logo">
-            <i class="fa-solid fa-signal"></i>
-            <span>Vodafone System</span>
+            <i class="fa-solid fa-droplet"></i>
+            <span>Vodafone Billing</span>
         </div>
         <ul class="nav-links">
             <li class="active" data-target="search-screen"><i class="fa-solid fa-magnifying-glass"></i> الشاشة الرئيسية للبحث</li>
-            <li data-target="invoices-screen"><i class="fa-solid fa-file-invoice-dollar"></i> إدارة الفواتير</li>
+            <li data-target="invoices-screen"><i class="fa-solid fa-file-invoice-dollar"></i> إدارة الفواتير والمعالجة</li>
             <li data-target="collection-screen"><i class="fa-solid fa-money-bill-wave"></i> شاشة التحصيل</li>
             <li data-target="advance-screen"><i class="fa-solid fa-wallet"></i> الدفع المقدم</li>
             <li data-target="settings-screen"><i class="fa-solid fa-gear"></i> الإعدادات والأفراد</li>
         </ul>
     </div>
 
+    <!-- المحتوى الرئيسي للموقع -->
     <div class="main-content">
         
+        <!-- 1. شاشة البحث الرئيسية والشاملة (تعديل - حذف - إضافة) -->
         <section id="search-screen" class="app-screen active-screen">
-            <h2><i class="fa-solid fa-magnifying-glass text-red"></i> البحث الشامل والديناميكي</h2>
+            <h2><i class="fa-solid fa-magnifying-glass text-red"></i> الاستعلام الشامل وإدارة الحسابات</h2>
             <div class="card search-box">
-                <input type="text" id="global-search-input" placeholder="أدخل اسم العميل أو رقم الهاتف للبحث الفوري...">
-                <button class="btn btn-red" onclick="executeGlobalSearch()"><i class="fa-solid fa-search"></i> بحث</button>
+                <input type="text" id="global-search-input" placeholder="ابحث هنا بالاسم أو الرقم لتعديل البيانات واستعراض الفواتير...">
+                <button class="btn btn-red" onclick="executeGlobalSearch()"><i class="fa-solid fa-search"></i> بحث فوري</button>
             </div>
             <div id="search-results-area" style="margin-top: 20px;"></div>
         </section>
 
+        <!-- 2. شاشة إدارة واستيراد الفواتير (مع معالجة الأسماء) -->
         <section id="invoices-screen" class="app-screen">
-            <h2><i class="fa-solid fa-file-invoice-dollar text-red"></i> استيراد ومعالجة الفواتير الشهرية</h2>
+            <h2><i class="fa-solid fa-file-invoice-dollar text-red"></i> استيراد ومعالجة الفواتير من Excel</h2>
             <div class="grid-2">
                 <div class="card">
-                    <h3><i class="fa-solid fa-upload"></i> رفع فاتورة جديدة</h3>
+                    <h3><i class="fa-solid fa-upload"></i> رفع ملف الفاتورة الشهرية</h3>
                     <div class="form-group">
-                        <label>تحديد الشهر والسنة</label>
+                        <label>تحديد شهر الفاتورة</label>
                         <input type="month" id="invoice-month-select" class="form-control">
                     </div>
                     <div class="form-group">
                         <label class="file-upload-label">
-                            <i class="fa-solid fa-cloud-arrow-up"></i> اختر ملف الفاتورة (CSV)
-                            <input type="file" id="invoice-file-input" accept=".csv" onchange="handleInvoiceImport(event)">
+                            <i class="fa-solid fa-file-excel" style="color: #008559;"></i> اضغط لرفع ملف (فاتورة 04-2026.xlsx)
+                            <input type="file" id="invoice-file-input" accept=".xlsx, .xls" onchange="handleInvoiceImport(event)">
                         </label>
                     </div>
                 </div>
                 <div class="card">
-                    <h3><i class="fa-solid fa-trash-can"></i> حذف فواتير مخزنة</h3>
+                    <h3><i class="fa-solid fa-trash-can"></i> إزالة الفواتير القديمة</h3>
                     <div class="form-group">
-                        <label>اختر الشهر المراد حذفه نهائيًا</label>
+                        <label>اختر الشهر لحذف بياناته التراكمية</label>
                         <select id="delete-invoice-month-select" class="form-control"></select>
                     </div>
-                    <button class="btn btn-red" onclick="deleteStoredInvoice()"><i class="fa-solid fa-trash"></i> حذف الفاتورة المحددة</button>
+                    <button class="btn btn-red" onclick="deleteStoredInvoice()"><i class="fa-solid fa-trash"></i> مسح سجل الفاتورة نهائياً</button>
                 </div>
             </div>
 
+            <!-- جدول المعالجة الذكي لمعرفة إذا كانت الأسماء مسجلة أم لا -->
             <div class="card table-card" id="invoice-preview-card" style="display:none; margin-top: 20px;">
                 <div class="table-header">
-                    <h3>معاينة ومعالجة بيانات الفاتورة المرفوعة</h3>
-                    <button class="btn btn-green" onclick="saveProcessedInvoice()"><i class="fa-solid fa-floppy-disk"></i> اعتماد وحفظ الفاتورة بالسيستم</button>
+                    <div>
+                        <h3>لوحة معالجة وتدقيق الفاتورة المرفوعة</h3>
+                        <p style="font-size: 13px; color: #555;">يرجى مراجعة حالة الأرقام أدناه قبل الحفظ النهائي في النظام.</p>
+                    </div>
+                    <button class="btn btn-green" onclick="saveProcessedInvoice()"><i class="fa-solid fa-floppy-disk"></i> اعتماد وحفظ الفاتورة بالشهر</button>
                 </div>
                 <div class="table-wrapper">
                     <table id="invoice-preview-table">
                         <thead>
                             <tr>
-                                <th>الرقم</th>
-                                <th>خطة الأسعار</th>
-                                <th>المبلغ بعد الضريبة</th>
+                                <th>رقم الهاتف</th>
+                                <th>خطة الأسعار المرفقة</th>
+                                <th>قيمة المطالبة المالية</th>
+                                <th>حالة الاسم والتحقق في النظام</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -81,14 +92,15 @@
             </div>
         </section>
 
+        <!-- 3. شاشة التحصيل المالي -->
         <section id="collection-screen" class="app-screen">
-            <h2><i class="fa-solid fa-money-bill-wave text-red"></i> شاشة التحصيل الشهرية</h2>
+            <h2><i class="fa-solid fa-money-bill-wave text-red"></i> شاشة التحصيل المالي والسداد</h2>
             <div class="card filter-box">
                 <div class="form-group" style="flex: 1; margin: 0 10px;">
-                    <label>اختر شهر الاستحقاق</label>
+                    <label>اختر شهر الاستحقاق الفعلي</label>
                     <select id="collection-month-select" class="form-control" onchange="loadCollectionData()"></select>
                 </div>
-                <button class="btn btn-green" onclick="payAllActiveInvoices()"><i class="fa-solid fa-check-double"></i> تحصيل ودفع كل الأرقام دفعة واحدة</button>
+                <button class="btn btn-green" onclick="payAllActiveInvoices()"><i class="fa-solid fa-check-double"></i> تحصيل وسداد كل الأرقام معاً</button>
             </div>
 
             <div class="card table-card" style="margin-top: 20px;">
@@ -98,11 +110,11 @@
                             <tr>
                                 <th>الرقم</th>
                                 <th>الاسم</th>
-                                <th>سعر الباقة</th>
+                                <th>سعر الباقة الأثاثي</th>
                                 <th>الفاتورة الفعلية</th>
-                                <th>المدفوع حالياً</th>
-                                <th>الحالة</th>
-                                <th>إجراءات السداد</th>
+                                <th>المدفوع حتى الآن</th>
+                                <th>حالة الحساب</th>
+                                <th>إجراءات السداد الجزئي/الكلي</th>
                             </tr>
                         </thead>
                         <tbody id="collection-table-body"></tbody>
@@ -111,10 +123,11 @@
             </div>
         </section>
 
+        <!-- 4. شاشة الدفع المقدم -->
         <section id="advance-screen" class="app-screen">
-            <h2><i class="fa-solid fa-wallet text-red"></i> إدارة الدفع المقدم (الرصيد التراكمي)</h2>
+            <h2><i class="fa-solid fa-wallet text-red"></i> محفظة الإيداع والدفع المقدم</h2>
             <div class="card search-box">
-                <input type="text" id="advance-search-input" placeholder="ابحث برقم الهاتف أو الاسم لإضافة دفعة مقدمة...">
+                <input type="text" id="advance-search-input" placeholder="ابحث برقم المحمول لإضافة رصيد مسبق...">
                 <button class="btn btn-red" onclick="searchForAdvance()"><i class="fa-solid fa-search"></i> استعلام</button>
             </div>
 
@@ -123,52 +136,56 @@
                     <h3 id="advance-user-name">اسم العميل</h3>
                     <p id="advance-user-phone">الرقم: </p>
                 </div>
-                <hr>
-                <div class="grid-2" style="margin-top: 15px;">
+                <hr style="margin:15px 0; border: 0; border-top: 1px solid #eee;">
+                <div class="grid-2">
                     <div class="metric">
-                        <label>الرصيد الحالي بالمقدم</label>
+                        <label>إجمالي الرصيد المقدم الحالي</label>
                         <h2 id="current-advance-balance" class="text-green">0.00 ج.م</h2>
                     </div>
                     <div>
                         <div class="form-group">
-                            <label>إيداع مبلغ جديد كدفعة مقدمة</label>
-                            <input type="number" id="new-advance-amount" class="form-control" placeholder="أدخل المبلغ هنا...">
+                            <label>شحن مبلغ إيداع جديد كدفعة مقدمة</label>
+                            <input type="number" id="new-advance-amount" class="form-control" placeholder="0.00">
                         </div>
-                        <button class="btn btn-green" onclick="saveAdvancePayment()"><i class="fa-solid fa-plus"></i> حفظ الدفعة المقدمة بالرصيد</button>
+                        <button class="btn btn-green" onclick="saveAdvancePayment()"><i class="fa-solid fa-plus"></i> حفظ الإيداع بالمحفظة</button>
                     </div>
                 </div>
             </div>
         </section>
 
+        <!-- 5. شاشة الإعدادات ودليل الأفراد -->
         <section id="settings-screen" class="app-screen">
-            <h2><i class="fa-solid fa-gear text-red"></i> إعدادات المنظومة وقاعدة بيانات الأفراد</h2>
+            <h2><i class="fa-solid fa-gear text-red"></i> الإعدادات وقاعدة بيانات الأفراد والباقات</h2>
             <div class="grid-2">
+                <!-- استيراد ملف إكسيل الأفراد -->
                 <div class="card">
-                    <h3><i class="fa-solid fa-file-import"></i> استيراد دليل الأفراد والباقات الأساسي</h3>
-                    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">ارفع ملف CSV الخاص بالأفراد (يحتوي على الأقل على الأعمدة: الاسم، الرقم، سعر الباقه، الاسعار)</p>
+                    <h3><i class="fa-solid fa-file-excel" style="color: #008559;"></i> استيراد دليل الأفراد الأساسي</h3>
+                    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">ارفع ملف Excel المسمى (الافراد والباقات.xlsx)</p>
                     <div class="form-group">
                         <label class="file-upload-label">
-                            <i class="fa-solid fa-file-excel"></i> اختر ملف الأفراد (CSV)
-                            <input type="file" id="settings-file-input" accept=".csv" onchange="handleSettingsImport(event)">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> اختر ملف الأفراد (.xlsx)
+                            <input type="file" id="settings-file-input" accept=".xlsx, .xls" onchange="handleSettingsImport(event)">
                         </label>
                     </div>
                 </div>
 
+                <!-- إضافة فرد يدوي جديد -->
                 <div class="card">
-                    <h3><i class="fa-solid fa-user-plus"></i> إضافة رقم جديد يدوياً</h3>
+                    <h3><i class="fa-solid fa-user-plus"></i> إضافة رقم يدوي جديد للمنظومة</h3>
                     <div class="grid-2">
-                        <input type="text" id="new-user-name" placeholder="الاسم" class="form-control">
-                        <input type="text" id="new-user-phone" placeholder="رقم الهاتف" class="form-control">
+                        <input type="text" id="new-user-name" placeholder="الاسم الكامل" class="form-control">
+                        <input type="text" id="new-user-phone" placeholder="رقم الهاتف (11 رقم)" class="form-control">
                         <input type="number" id="new-user-price" placeholder="سعر الباقة" class="form-control">
                         <input type="text" id="new-user-plan" placeholder="خطة الأسعار" class="form-control">
                     </div>
-                    <button class="btn btn-red" style="margin-top:15px; width:100%;" onclick="addNewUserFromSettings()"><i class="fa-solid fa-user-check"></i> حفظ الفرد الجديد</button>
+                    <button class="btn btn-red" style="margin-top:15px; width:100%;" onclick="addNewUserFromSettings()"><i class="fa-solid fa-user-check"></i> إدراج الفرد في النظام</button>
                 </div>
             </div>
 
+            <!-- جدول استعراض الأفراد في لوحة الإعدادات -->
             <div class="card table-card" style="margin-top: 20px;">
                 <div class="table-header">
-                    <h3>دليل الأفراد والأرقام المسجلة بالنظام</h3>
+                    <h3>دليل الهواتف والأفراد المعتمدين الحاليين</h3>
                     <input type="text" id="settings-table-search" placeholder="تصفية سريعة بالاسم أو الرقم..." onkeyup="filterSettingsTable()" class="form-control" style="width: 300px; margin: 0;">
                 </div>
                 <div class="table-wrapper">
@@ -177,9 +194,9 @@
                             <tr>
                                 <th>الاسم</th>
                                 <th>الرقم</th>
-                                <th>سعر الباقة</th>
-                                <th>خطة الأسعار</th>
-                                <th>إجراءات</th>
+                                <th>سعر الباقة الأساسي</th>
+                                <th>خطة الأسعار المسجلة</th>
+                                <th>إجراءات الإدارة</th>
                             </tr>
                         </thead>
                         <tbody id="settings-table-body"></tbody>
@@ -189,14 +206,14 @@
         </section>
     </div>
 
+    <!-- نافذة تعديل بيانات العميل العائمة (Modal Popup) -->
     <div id="edit-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>تعديل بيانات الحساب</h3>
+                <h3>تعديل البيانات الأساسية للحساب</h3>
                 <span class="close-modal" onclick="closeEditModal()">&times;</span>
             </div>
             <div class="modal-body">
-                <input type="hidden" id="edit-old-phone">
                 <div class="form-group">
                     <label>الاسم</label>
                     <input type="text" id="edit-name" class="form-control">
@@ -213,13 +230,19 @@
                     <label>خطة الأسعار (Rate Plan)</label>
                     <input type="text" id="edit-plan" class="form-control">
                 </div>
-                <button class="btn btn-red" style="width:100%; margin-top:10px;" onclick="saveClientEdits()"><i class="fa-solid fa-check"></i> حفظ التحديثات</button>
+                <button class="btn btn-red" style="width:100%; margin-top:10px;" onclick="saveClientEdits()"><i class="fa-solid fa-check"></i> حفظ التحديثات والتعديل</button>
             </div>
         </div>
     </div>
 
+    <!-- مكتبات Firebase الأساسية القديمة المتوافقة مع المتصفح المباشر -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    
+    <!-- مكتبة لقرائة ملفات Excel (.xlsx) مباشرةً من المتصفح -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- ملف المنطق والعمليات -->
     <script src="app.js"></script>
 </body>
 </html>
