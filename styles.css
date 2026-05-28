@@ -1,6 +1,5 @@
-/* الألوان العامة والخط المعتمد لفودافون */
 :root {
-    --primary-color: #E60000;      /* الأحمر الأساسي لفودافون */
+    --primary-color: #E60000;      /* الأحمر الأساسي المميز لفودافون */
     --primary-hover: #BD0000;
     --dark-bg: #1A1A1A;
     --light-bg: #F4F4F4;
@@ -24,7 +23,7 @@ body {
     min-height: 100vh;
 }
 
-/* الشريط الجانبي للتنقل */
+/* القائمة الجانبية للتنقل */
 .sidebar {
     width: 260px;
     background-color: var(--dark-bg);
@@ -71,7 +70,7 @@ body {
     border-right-color: var(--primary-color);
 }
 
-/* المحتوى الرئيسي للمنظومة */
+/* منطقة المحتوى الرئيسي */
 .main-content {
     margin-right: 260px;
     padding: 40px;
@@ -103,7 +102,7 @@ h2 {
 .text-red { color: var(--primary-color); }
 .text-green { color: var(--green-success); }
 
-/* الكروت والتصميم الهيكلي */
+/* تصميم الكروت والحقول */
 .card {
     background: var(--white);
     border-radius: 12px;
@@ -119,7 +118,6 @@ h2 {
     gap: 20px;
 }
 
-/* الحقول والنماذج المخصصة */
 .form-group {
     margin-bottom: 15px;
 }
@@ -145,7 +143,7 @@ h2 {
     border-color: var(--primary-color);
 }
 
-/* أزرار فودافون العصرية */
+/* الأزرار العصرية */
 .btn {
     padding: 10px 20px;
     border: none;
@@ -163,10 +161,10 @@ h2 {
 .btn-red:hover { background-color: var(--primary-hover); }
 .btn-green { background-color: var(--green-success); color: var(--white); }
 .btn-green:hover { opacity: 0.9; }
-.btn-outline { background: transparent; border: 1px solid var(--gray-border); }
+.btn-outline { background: transparent; border: 1px solid var(--gray-border); color: #555; }
 .btn-outline:hover { background: #f0f0f0; }
 
-/* رفع الملفات بتصميم جذاب */
+/* رفع الملفات بنمط احترافي */
 .file-upload-label {
     display: flex;
     flex-direction: column;
@@ -182,9 +180,9 @@ h2 {
 
 .file-upload-label:hover { background-color: #FFEAE4; }
 .file-upload-label input[type="file"] { display: none; }
-.file-upload-label i { font-size: 35px; color: var(--primary-color); margin-bottom: 10px; }
+.file-upload-label i { font-size: 35px; margin-bottom: 10px; }
 
-/* الجداول المنظمة والذكية */
+/* تصميم الجداول الذكية */
 .table-card { padding: 0; overflow: hidden; }
 .table-header { padding: 20px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--gray-border); }
 .table-wrapper { width: 100%; overflow-x: auto; }
@@ -199,16 +197,16 @@ th, td { padding: 15px 25px; border-bottom: 1px solid var(--gray-border); font-s
 th { background-color: #FAFAFA; font-weight: 700; color: #555; }
 tr:hover { background-color: #FDFDFD; }
 
-/* التصنيفات والحالة */
-.badge { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+/* شارات الحالة الملونة (Badges) */
+.badge { padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-flex; align-items: center; gap: 5px; }
 .badge-red { background-color: #FFE5E5; color: var(--primary-color); }
 .badge-green { background-color: #E2F6EE; color: var(--green-success); }
+.badge-orange { background-color: #FFF3CD; color: #856404; } /* لتمييز الأرقام غير المسجلة مسبقاً */
 
-/* صندوق البحث العلوي */
 .search-box { display: flex; gap: 15px; align-items: center; }
 .search-box input { flex: 1; padding: 14px 20px; border-radius: 8px; border: 1px solid var(--gray-border); font-size: 15px; }
 
-/* النوافذ العائمة (Modal) */
+/* النوافذ المنبثقة للتعديل والحذف */
 .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
 .modal-content { background: var(--white); width: 450px; border-radius: 12px; animation: slideDown 0.3s ease; overflow: hidden; }
 @keyframes slideDown { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
