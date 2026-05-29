@@ -133,6 +133,23 @@
                         <button class="btn btn-green" onclick="payAllActiveInvoices()"><i class="fa-solid fa-check-double"></i> تحصيل وسداد الجميع بالكامل</button>
                     </div>
                 </div>
+
+                <!-- حقل البحث للإلغاء - يظهر المسددين عند الكتابة -->
+                <div style="margin-bottom: 12px;">
+                    <div style="position: relative;">
+                        <i class="fa-solid fa-magnifying-glass" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#9ca3af;"></i>
+                        <input type="text" id="collection-search-input"
+                            class="form-control"
+                            placeholder="🔍 ابحث باسم أو رقم... (يعرض المسددين أيضاً لإمكانية إلغاء سدادهم)"
+                            oninput="filterCollectionTable()"
+                            style="padding-right: 36px;">
+                    </div>
+                    <small style="color:#6b7280; font-size:11px; margin-top:4px; display:block;">
+                        <i class="fa-solid fa-circle-info"></i>
+                        اتركه فارغاً لعرض المدينين فقط — اكتب اسماً أو رقماً لعرض المسدد وإلغاء سداده
+                    </small>
+                </div>
+
                 <div class="table-wrapper">
                     <table id="collection-table">
                         <thead>
@@ -200,7 +217,7 @@
 
                         <div class="grid-3" style="gap:10px; margin-bottom:15px; text-align:center;">
                             <div style="background:#fff; padding:10px; border:1px solid #ddd; border-radius:6px;"><small style="color:#666;">مطلوب باقات تراكمي</small><br><strong id="statement-total-required">0.00</strong></div>
-                            <div style="background:#fff; padding:10px; border:1px solid #ddd; border-radius:6px;"><small style="color:#666;">Sample مسدد</small><br><strong id="statement-total-paid" style="color:var(--green-success);">0.00</strong></div>
+                            <div style="background:#fff; padding:10px; border:1px solid #ddd; border-radius:6px;"><small style="color:#666;">إجمالي مسدد</small><br><strong id="statement-total-paid" style="color:var(--green-success);">0.00</strong></div>
                             <div style="background:#fff; padding:10px; border:1px solid #ddd; border-radius:6px;"><small style="color:#666;">مديونية معلقة</small><br><strong id="statement-total-debt" style="color:var(--primary-color);">0.00</strong></div>
                         </div>
 
