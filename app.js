@@ -283,6 +283,23 @@ function deleteStoredInvoice() {
 // ==========================================
 // [4] شاشة التحصيل ومراجعة فوارق الـ 9 جنيهات
 // ==========================================
+
+// بحث سريع داخل جدول التحصيل (يشمل المسددين لإمكانية الإلغاء)
+function filterCollectionTable() {
+    const searchInput = document.getElementById('collection-search-input');
+    const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    const rows = document.querySelectorAll('#collection-table-body tr');
+    rows.forEach(row => {
+        if (!query) {
+            // بدون بحث: إخفاء الصفوف المسددة الآمنة (السلوك الافتراضي)
+            row.style.display = row.dataset.fullyPaid === '1' ? 'none' : '';
+        } else {
+            // مع البحث: عرض كل الصفوف المطابقة بما فيها المسددة
+            row.style.display = row.innerText.toLowerCase().includes(query) ? '' : 'none';
+        }
+    });
+}
+
 function loadCollectionData() {
     const month = document.getElementById('collection-month-select').value;
     const tbody = document.getElementById('collection-table-body');
@@ -290,9 +307,14 @@ function loadCollectionData() {
     tbody.innerHTML = '';
     if (!month) return;
 
+    // مسح حقل البحث عند تغيير الشهر
+    const searchInput = document.getElementById('collection-search-input');
+    if (searchInput) searchInput.value = '';
+
     db.ref(`invoices/${month}`).once('value', snapshot => {
         const invoices = snapshot.val() || {};
         let activeRowsCount = 0;
+        let fullyPaidCount = 0;
 
         for (let phone in invoices) {
             const inv = invoices[phone];
@@ -306,11 +328,11 @@ function loadCollectionData() {
             const diffAmt = packageAmt - invoiceAmt;
 
             const isTargetForReview = (invoiceAmt >= packageAmt || (diffAmt >= 8.4 && diffAmt <= 9.6));
+            const isFullyPaidSafe = (packageAmt > 0 && remaining <= 0 && !isTargetForReview);
 
-            // إخفاء الصفوف المسددة بالكامل والآمنة
-            if (packageAmt > 0 && remaining <= 0 && !isTargetForReview) continue;
-
-            activeRowsCount++;
+            // المسددون الآمنون يُضافون للجدول لكن مخفيون (يظهرون عند البحث فقط)
+            if (isFullyPaidSafe) fullyPaidCount++;
+            else activeRowsCount++;
 
             let rowBgColor = '';
             let comparisonHtml = '';
@@ -344,7 +366,12 @@ function loadCollectionData() {
             }
 
             const tr = document.createElement('tr');
-            if (rowBgColor) tr.setAttribute('style', rowBgColor);
+            // حفظ حالة الصف كـ data attribute لاستخدامه في البحث والفلترة
+            tr.dataset.fullyPaid = isFullyPaidSafe ? '1' : '0';
+            // الصفوف المسددة الآمنة تُخفى افتراضياً وتظهر عند البحث
+            if (isFullyPaidSafe) tr.style.display = 'none';
+            if (rowBgColor) tr.style.cssText += rowBgColor;
+
             tr.innerHTML = `
                 <td>${phone}</td>
                 <td><strong>${user.name}</strong></td>
@@ -364,8 +391,17 @@ function loadCollectionData() {
             tbody.appendChild(tr);
         }
 
-        if (activeRowsCount === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--green-success); font-weight:bold; padding:35px; font-size:16px;"><i class="fa-solid fa-square-check"></i> ممتاز! تمت تسوية كل الحسابات المتاحة لهذا الشهر!</td></tr>`;
+        if (activeRowsCount === 0 && fullyPaidCount > 0) {
+            const infoRow = document.createElement('tr');
+            infoRow.innerHTML = `<td colspan="7" style="text-align:center; color:var(--green-success); font-weight:bold; padding:25px; font-size:16px;">
+                <i class="fa-solid fa-square-check"></i> ممتاز! تمت تسوية كل الحسابات لهذا الشهر!
+                <div style="font-size:13px; font-weight:normal; color:#6b7280; margin-top:6px;">
+                    ابحث باسم أو رقم لعرض سجل المسدد وإلغاء سداده إن لزم
+                </div>
+            </td>`;
+            tbody.appendChild(infoRow);
+        } else if (activeRowsCount === 0 && fullyPaidCount === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#6b7280; padding:35px;">لا توجد بيانات لهذا الشهر.</td></tr>`;
         }
     });
 }
@@ -391,12 +427,112 @@ function collectCustomPayment(month, phone, requiredTotal, alreadyPaid) {
 }
 
 function cancelPayment(month, phone) {
-    if (!confirm(`هل تريد إلغاء كامل مبلغ السداد للرقم ${phone} في شهر ${month}؟`)) return;
+    db.ref(`invoices/${month}/${phone}`).once('value', snapshot => {
+        const inv = snapshot.val();
+        if (!inv) return alert("لم يتم العثور على بيانات هذا السجل.");
+
+        const currentPaid = parseFloat(inv.paidAmount) || 0;
+        const packageAmt  = parseFloat(inv.packagePrice) || 0;
+        const user        = loadedGlobalSettings[phone] || { name: phone };
+
+        if (currentPaid <= 0) return alert("لا يوجد مبلغ مسدد لإلغائه.");
+
+        // بناء نافذة الإلغاء الذكية
+        const modalId = 'cancel-payment-modal';
+        let existing = document.getElementById(modalId);
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = modalId;
+        modal.style.cssText = `
+            position:fixed; inset:0; background:rgba(0,0,0,0.55);
+            display:flex; align-items:center; justify-content:center; z-index:9999;
+        `;
+        modal.innerHTML = `
+            <div style="background:#fff; border-radius:12px; padding:28px 24px; width:360px; max-width:95vw; box-shadow:0 8px 32px rgba(0,0,0,0.18); direction:rtl;">
+                <h3 style="margin:0 0 6px; font-size:17px; color:#dc2626;">
+                    <i class="fa-solid fa-rotate-left"></i> إلغاء سداد
+                </h3>
+                <p style="font-size:13px; color:#555; margin:0 0 18px;">
+                    ${user.name} &nbsp;|&nbsp; ${phone}<br>
+                    <span style="color:#2563eb; font-weight:bold;">المبلغ المسدد حالياً: ${currentPaid.toFixed(2)} ج.م</span>
+                </p>
+
+                <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px;">
+                        <input type="radio" name="cancel-type" value="full" checked onchange="toggleCancelInput()">
+                        إلغاء كامل المبلغ (${currentPaid.toFixed(2)} ج.م)
+                    </label>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px;">
+                        <input type="radio" name="cancel-type" value="partial" onchange="toggleCancelInput()">
+                        إلغاء مبلغ جزئي محدد
+                    </label>
+                    <div id="partial-cancel-wrapper" style="display:none; margin-right:22px;">
+                        <input type="number" id="cancel-partial-amount"
+                            placeholder="أدخل المبلغ المراد إلغاؤه"
+                            max="${currentPaid}"
+                            min="0.01"
+                            step="0.01"
+                            style="width:100%; padding:8px 10px; border:1px solid #ddd; border-radius:7px; font-size:14px; direction:ltr; text-align:right;">
+                        <small style="color:#6b7280; font-size:11px;">الحد الأقصى: ${currentPaid.toFixed(2)} ج.م</small>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:10px; justify-content:flex-end;">
+                    <button onclick="document.getElementById('${modalId}').remove()"
+                        style="padding:8px 18px; border-radius:7px; border:1px solid #ddd; background:#f3f4f6; cursor:pointer; font-size:13px;">
+                        تراجع
+                    </button>
+                    <button onclick="confirmCancelPayment('${month}', '${phone}', ${currentPaid}, ${packageAmt})"
+                        style="padding:8px 18px; border-radius:7px; border:none; background:#dc2626; color:#fff; cursor:pointer; font-size:13px; font-weight:bold;">
+                        <i class="fa-solid fa-check"></i> تأكيد الإلغاء
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        // إغلاق بالضغط خارج النافذة
+        modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    });
+}
+
+function toggleCancelInput() {
+    const isPartial = document.querySelector('input[name="cancel-type"]:checked').value === 'partial';
+    document.getElementById('partial-cancel-wrapper').style.display = isPartial ? 'block' : 'none';
+}
+
+function confirmCancelPayment(month, phone, currentPaid, packageAmt) {
+    const type = document.querySelector('input[name="cancel-type"]:checked').value;
+    let amountToCancel = 0;
+
+    if (type === 'full') {
+        amountToCancel = currentPaid;
+    } else {
+        amountToCancel = parseFloat(document.getElementById('cancel-partial-amount').value);
+        if (isNaN(amountToCancel) || amountToCancel <= 0) {
+            return alert("يرجى إدخال مبلغ إلغاء صحيح أكبر من الصفر.");
+        }
+        if (amountToCancel > currentPaid) {
+            return alert(`لا يمكن إلغاء مبلغ (${amountToCancel.toFixed(2)}) أكبر من المبلغ المسدد (${currentPaid.toFixed(2)}).`);
+        }
+    }
+
+    const newPaid   = currentPaid - amountToCancel;
+    let newStatus   = "غير مدفوع";
+    if (newPaid > 0 && newPaid < packageAmt) newStatus = "مدفوع جزئياً";
+    else if (newPaid >= packageAmt)          newStatus = "مدفوع بالكامل";
+
     db.ref(`invoices/${month}/${phone}`).update({
-        paidAmount: 0,
-        status: "غير مدفوع"
+        paidAmount: newPaid,
+        status: newStatus
     }, () => {
-        alert("تم إلغاء السداد وإعادة تصفير المبلغ المحصل.");
+        document.getElementById('cancel-payment-modal').remove();
+        alert(
+            type === 'full'
+                ? `تم إلغاء كامل السداد (${amountToCancel.toFixed(2)} ج.م) بنجاح.`
+                : `تم إلغاء مبلغ (${amountToCancel.toFixed(2)} ج.م)، المتبقي المسدد: ${newPaid.toFixed(2)} ج.م.`
+        );
         loadCollectionData();
         calculateFinancialReport();
     });
@@ -819,4 +955,3 @@ function saveClientEdits() {
         calculateFinancialReport();
     });
 }
-
