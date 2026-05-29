@@ -927,31 +927,69 @@ function deleteUser(phone) {
     });
 }
 
+// month: يُمرَّر من شاشة التحصيل لتحديث packagePrice في الشهر المحدد أيضاً
+// إن كان فارغاً (من شاشة الإعدادات) يُحدَّث settings فقط
+let _editTargetMonth = '';
+
 function openEditModal(phone, name, price, plan, month) {
     const user = loadedGlobalSettings[phone];
     if (!user && !name) return;
+
+    _editTargetMonth = month || '';
+
     document.getElementById('edit-phone').value = phone;
     document.getElementById('edit-name').value = name || (user ? user.name : '');
     document.getElementById('edit-price').value = price !== undefined ? price : (user ? user.price : 0);
     document.getElementById('edit-plan').value = plan || (user ? user.ratePlan : '');
+
+    // إظهار تلميح للمستخدم إن كان التعديل مرتبطاً بشهر محدد
+    const monthHint = document.getElementById('edit-month-hint');
+    if (monthHint) {
+        if (_editTargetMonth) {
+            monthHint.innerHTML = `<i class="fa-solid fa-circle-info" style="color:#2563eb;"></i>
+                سيتم تحديث سعر الباقة في شهر <strong>${_editTargetMonth}</strong> والإعدادات معاً`;
+            monthHint.style.display = 'block';
+        } else {
+            monthHint.style.display = 'none';
+        }
+    }
+
     document.getElementById('editClientModal').style.display = 'flex';
 }
 
 function closeEditModal() {
+    _editTargetMonth = '';
     document.getElementById('editClientModal').style.display = 'none';
 }
 
 function saveClientEdits() {
     const phone = document.getElementById('edit-phone').value;
-    const name = document.getElementById('edit-name').value.trim();
+    const name  = document.getElementById('edit-name').value.trim();
     const price = parseFloat(document.getElementById('edit-price').value);
-    const plan = document.getElementById('edit-plan').value.trim();
+    const plan  = document.getElementById('edit-plan').value.trim();
 
     if (!name || isNaN(price)) return alert("يرجى إدخال بيانات صحيحة.");
-    db.ref('settings/' + phone).update({ name, price, ratePlan: plan }, () => {
-        alert("تم تحديث بيانات العميل بنجاح.");
+
+    // 1) تحديث الإعدادات العامة دائماً
+    let updates = {};
+    updates[`settings/${phone}/name`]     = name;
+    updates[`settings/${phone}/price`]    = price;
+    updates[`settings/${phone}/ratePlan`] = plan;
+
+    // 2) إن كان التعديل قادماً من شاشة التحصيل → حدّث packagePrice في الشهر المحدد
+    if (_editTargetMonth) {
+        updates[`invoices/${_editTargetMonth}/${phone}/packagePrice`] = price;
+        updates[`invoices/${_editTargetMonth}/${phone}/ratePlan`]     = plan;
+    }
+
+    db.ref().update(updates, () => {
+        const msg = _editTargetMonth
+            ? `تم تحديث بيانات العميل وسعر باقته في شهر ${_editTargetMonth} بنجاح.`
+            : `تم تحديث بيانات العميل في الإعدادات بنجاح.`;
+        alert(msg);
         closeEditModal();
         loadSettingsTable();
+        if (_editTargetMonth) loadCollectionData();
         calculateFinancialReport();
     });
 }
