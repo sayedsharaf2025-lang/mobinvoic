@@ -101,6 +101,7 @@ h2 {
 
 .text-red { color: var(--primary-color); }
 .text-green { color: var(--green-success); }
+.text-blue { color: #2563eb; }
 
 /* تصميم الكروت والحقول */
 .card {
