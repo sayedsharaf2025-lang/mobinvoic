@@ -82,7 +82,7 @@ function syncAdvancePayments() {
 }
 
 // ==========================================
-// [2] شاشة الإعدادات واستيراد الأفراد والباقات
+// [2] شاشة الإعدادات واستيراد الأفراد والباقات الافتراضية
 // ==========================================
 function handleSettingsImport(e) {
     const file = e.target.files[0];
@@ -182,7 +182,7 @@ function deleteUser(phone) {
 }
 
 // ==========================================
-// [3] شاشة استيراد ومعالجة الفواتير الشهرية (مع حفظ لقطة لسعر الباقة المعتمد للشهر)
+// [3] شاشة استيراد الفواتير (تثبيت لقطة لسعر الباقة المعتمد للشهر المالي)
 // ==========================================
 function handleInvoiceImport(e) {
     const file = e.target.files[0];
@@ -261,7 +261,7 @@ function saveProcessedInvoice() {
         }
 
         const user = loadedGlobalSettings[item.phone] || { price: 0 };
-        const requiredAmount = user.price; // سعر الباقة الحالي الافتراضي
+        const requiredAmount = user.price; // سعر الباقة الافتراضي الحالي بالدليل
         let advanceBalance = loadedAdvancePayments[item.phone] || 0; 
         
         let paid = 0;
@@ -281,7 +281,7 @@ function saveProcessedInvoice() {
             loadedAdvancePayments[item.phone] = advanceBalance;
         }
 
-        // [تعديل أساسي]: يتم حفظ الـ packagePrice الخاص بهذا الشهر بداخل تفاصيل الفاتورة لحمايته تاريخياً
+        // [تطبيق التعديل المحمي تاريخياً]: يتم حفظ الـ packagePrice بداخل سجل الشهر نفسه
         db.ref(`invoices/${month}/${item.phone}`).set({
             ratePlan: item.ratePlan,
             totalAfterTaxes: item.totalTaxes,
@@ -291,7 +291,7 @@ function saveProcessedInvoice() {
         });
     });
 
-    alert(`تم بنجاح اعتماد وحفظ فاتورة شهر (${month}) بالكامل لعمليات جرد الأرباح والمتابعة.`);
+    alert(`تم بنجاح اعتماد وحفظ فاتورة شهر (${month}) بالكامل وتأمين أسعار الباقات التاريخية.`);
     
     currentParsedInvoice = [];
     document.getElementById('invoice-file-input').value = '';
@@ -334,7 +334,7 @@ function deleteStoredInvoice() {
 }
 
 // ==========================================
-// [4] شاشة التحصيل المالي (تعتمد على سعر باقة الشهر المستقل)
+// [4] شاشة التحصيل (الاعتماد الذاتي على سعر باقة الشهر المستقل)
 // ==========================================
 function loadCollectionData() {
     const month = document.getElementById('collection-month-select').value;
@@ -352,10 +352,9 @@ function loadCollectionData() {
             
             const paid = inv.paidAmount || 0;
             
-            // [تعديل]: قراءة سعر باقة الشهر المخزن بالفاتورة، وإذا لم يكن موجوداً نعود للسعر الافتراضي من الإعدادات
+            // [تطبيق التعديل]: قراءة سعر باقة الشهر من داخل الفاتورة، وإلا نعود للافتراضي كدعم خلفي
             const packageAmt = inv.packagePrice !== undefined ? parseFloat(inv.packagePrice) : parseFloat(user.price) || 0;
-            const requiredAmount = packageAmt; 
-            const remaining = requiredAmount - paid; 
+            const remaining = packageAmt - paid; 
 
             const invoiceAmt = parseFloat(inv.totalAfterTaxes) || 0;
             const diffAmt = packageAmt - invoiceAmt; 
@@ -409,7 +408,7 @@ function loadCollectionData() {
                 <td>${statusHtml}</td>
                 <td>
                     <input type="number" id="pay-amt-${phone}" value="${remaining > 0 ? remaining.toFixed(2) : 0}" class="form-control" style="width:75px; display:inline-block; padding:4px;">
-                    <button class="btn btn-green" style="padding:5px 10px;" onclick="collectCustomPayment('${month}', '${phone}', ${requiredAmount}, ${paid})">تسجيل</button>
+                    <button class="btn btn-green" style="padding:5px 10px;" onclick="collectCustomPayment('${month}', '${phone}', ${packageAmt}, ${paid})">تسجيل</button>
                     <button class="btn btn-outline" style="padding:5px 10px; color:blue;" onclick="openEditModal('${phone}', '${user.name}', ${packageAmt}, '${user.ratePlan || ''}', '${month}')"><i class="fa-solid fa-pen"></i> تعديل السعر</button>
                     ${cancelBtn}
                 </td>
@@ -418,7 +417,7 @@ function loadCollectionData() {
         }
         
         if (activeRowsCount === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--green-success); font-weight:bold; padding:35px; font-size:16px;"><i class="fa-solid fa-square-check"></i> ممتاز! تمت تسوية كل الحسابات المتاحة ولا توجد مديونيات أو خطوط مراجعة معلقة لهذا الشهر!</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--green-success); font-weight:bold; padding:35px; font-size:16px;"><i class="fa-solid fa-square-check"></i> ممتاز! تمت تسوية كل الحسابات المتاحة لهذا الشهر!</td></tr>`;
         }
     });
 }
@@ -535,7 +534,7 @@ function saveAdvancePayment() {
                     const inv = allInvoices[month][phone];
                     const userSetting = loadedGlobalSettings[phone] || { price: 0 };
                     
-                    // [تعديل]: هنا نعتمد على سعر باقة الشهر المحددة بالفاتورة عند التفتيش عن مديونيات قديمة
+                    // [تطبيق التعديل]: الخصم التلقائي يعتمد على السعر المحفوظ للفاتورة في ذلك الشهر
                     const requiredAmount = inv.packagePrice !== undefined ? inv.packagePrice : userSetting.price;
                     const alreadyPaid = inv.paidAmount || 0;
                     let remainingDebt = requiredAmount - alreadyPaid;
@@ -583,7 +582,7 @@ function saveAdvancePayment() {
 }
 
 // ==========================================
-// [6] شاشة البحث الشامل والتقرير المالي (مع جرد الأرباح بناء على أسعار باقات الشهور الصحيحة)
+// [6] شاشة البحث الشامل وجرد الأرباح بناء على باقة كل شهر الصحيحة
 // ==========================================
 function saveExtraFinancials() {
     const selectedMonth = document.getElementById('search-month-select').value;
@@ -648,7 +647,7 @@ function calculateFinancialReport() {
                 
                 totalExcelInvoices += parseFloat(inv.totalAfterTaxes) || 0;
                 
-                // [تعديل التقرير]: حساب الأرباح بناءً على أسعار الباقات الفعلية لكل شهر وليس السعر العام الثابت الحالي
+                // [تعديل التقرير]: الحساب الدقيق للأرباح بناءً على أسعار الباقات الفعلية لكل شهر وليس السعر العام
                 const packageAmt = inv.packagePrice !== undefined ? parseFloat(inv.packagePrice) : parseFloat(user.price) || 0;
                 totalApprovedPackages += packageAmt;
             }
@@ -678,7 +677,7 @@ function calculateFinancialReport() {
             <div style="background: #ffffff; padding: 15px; border-radius: 8px; border-right: 5px solid #2563eb; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                 <span style="font-size: 11px; color: #666; display: block; font-weight: bold;">إجمالي الباقات المسعرة (+ إيراد إضافي)</span>
                 <strong style="font-size: 18px; color: #2563eb; display:block; margin-top:5px;">${finalTotalPackages.toFixed(2)} ج.م</strong>
-                <small style="font-size: 10px; color:#888;">الأساسي من الدليل: ${totalApprovedPackages.toFixed(2)}</small>
+                <small style="font-size: 10px; color:#888;">الأساسي المعتمد: ${totalApprovedPackages.toFixed(2)}</small>
             </div>
             <div style="background: #ffffff; padding: 15px; border-radius: 8px; border-right: 5px solid #dc2626; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                 <span style="font-size: 11px; color: #666; display: block; font-weight: bold;">إجمالي فواتير فودافون المرفوعة (+ مصاريف)</span>
@@ -767,7 +766,7 @@ function fetchUserFinancialHistory(phone, selectedMonth) {
                 const inv = months[m][phone];
                 const user = loadedGlobalSettings[phone] || { price: 0 };
                 
-                // [تعديل]: عرض سعر الباقة الفعلي المعتمد في هذا الشهر داخل جدول السجل التاريخي
+                // [تعديل]: عرض سعر الباقة الفعلي المعتمد في هذا الشهر من الفاتورة ذاتها وليس العام
                 const packageAmt = inv.packagePrice !== undefined ? parseFloat(inv.packagePrice) : parseFloat(user.price) || 0;
                 const remaining = packageAmt - (inv.paidAmount || 0);
                 
@@ -835,7 +834,7 @@ function cancelPayment(month, phone) {
 }
 
 // ==========================================
-// [7] النوافذ المنبثقة (Modals) تدعم تعديل سعر الشهر مع تحديث السعر الافتراضي للشهور القادمة تلقائياً
+// [7] النوافذ المنبثقة (Modals) لتحديث السعر المزدوج (الشهر الحالي + الافتراضي)
 // ==========================================
 function openEditModal(phone, name, price, plan, month = '') {
     document.getElementById('edit-name').value = name;
@@ -843,7 +842,7 @@ function openEditModal(phone, name, price, plan, month = '') {
     document.getElementById('edit-price').value = price;
     document.getElementById('edit-plan').value = plan;
     
-    // حفظ الشهر الحالي المُراد تعديل السعر بداخله كخاصية مؤقتة داخل الـ Modal
+    // حفظ الشهر المُراد تعديل السعر بداخله كخاصية مؤقتة داخل الـ Modal
     document.getElementById('edit-modal').setAttribute('data-edit-month', month);
     document.getElementById('edit-modal').style.display = 'flex';
 }
@@ -859,7 +858,7 @@ function saveClientEdits() {
     const plan = document.getElementById('edit-plan').value.trim();
     const month = document.getElementById('edit-modal').getAttribute('data-edit-month');
 
-    // 1. تحديث الإعدادات العامة للعميل (ليكون هو السعر الافتراضي والأساسي لأي شهور قادمة ترفعها)
+    // 1. تحديث الإعدادات العامة للعميل (ليكون هو السعر الافتراضي لأي شهور قادمة ترفعها)
     db.ref('settings/' + phone).update({ name, price, ratePlan: plan }, () => {
         
         // 2. إذا كنا نقوم بالتعديل من شاشة التحصيل لشهر مالي محدد، نقوم بتعديل باقة هذا الشهر فوراً وحمايتها تاريخياً
@@ -867,7 +866,7 @@ function saveClientEdits() {
             db.ref(`invoices/${month}/${phone}`).update({
                 packagePrice: price
             }, () => {
-                // إعادة تقييم الفاتورة للعميل بعد تعديل باقته (لتتحول إلى مدفوع بالكامل أو متبقي مديونية بناء على مدفوعاته القديمة)
+                // إعادة تقييم الفاتورة للعميل تلقائياً بعد تعديل باقته لتحديث حالته (مدفوع/جزئي/غير مدفوع)
                 db.ref(`invoices/${month}/${phone}`).once('value', snapshot => {
                     const inv = snapshot.val() || {};
                     const paid = inv.paidAmount || 0;
@@ -884,7 +883,7 @@ function saveClientEdits() {
     });
 
     function finalizeEdits() {
-        alert("تم تعديل وحفظ بيانات العميل وتحديث الحسابات التاريخية والأرباح فورياً!");
+        alert("تم تعديل بيانات العميل بنجاح وتحديث الحسابات التاريخية والأرباح فورياً للعميل!");
         closeEditModal();
         loadSettingsTable();
         loadCollectionData(); 
