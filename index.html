@@ -20,280 +20,255 @@
             <li data-target="invoices-screen"><i class="fa-solid fa-file-invoice-dollar"></i> إدارة الفواتير والمعالجة</li>
             <li data-target="collection-screen"><i class="fa-solid fa-money-bill-wave"></i> شاشة التحصيل</li>
             <li data-target="advance-screen"><i class="fa-solid fa-wallet"></i> الدفع المقدم</li>
-            <li data-target="settings-screen"><i class="fa-solid fa-gear"></i> الإعدادات والأفراد</li>
-            <li data-target="statement-screen"><i class="fa-solid fa-file-lines"></i> كشف حساب تفصيلي</li>
+            <li data-target="settings-screen"><i class="fa-solid fa-gear"></i> دليل الأفراد والإعدادات</li>
         </ul>
     </div>
 
     <div class="main-content">
         
-        <section id="search-screen" class="app-screen active-screen">
-            <h2><i class="fa-solid fa-magnifying-glass text-red"></i> الاستعلام الشامل وإدارة الحسابات والأرباح</h2>
-            
-            <div class="card search-box" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
-                <input type="text" id="global-search-input" placeholder="ابحث هنا بالاسم أو الرقم لتعديل البيانات واستعراض الفواتير..." style="flex: 2; min-width: 250px;">
-                <div style="flex: 1; min-width: 160px;">
-                    <select id="search-month-select" class="form-control" style="margin: 0;">
-                        <option value="all">كل الأشهر المتاحة</option>
-                    </select>
-                </div>
-                <button class="btn btn-red" onclick="executeGlobalSearch()"><i class="fa-solid fa-search"></i> بحث فوري</button>
+        <div id="search-screen" class="app-screen active-screen">
+            <div class="header">
+                <h2>الشاشة الرئيسية للبحث والاستعلام الشامل</h2>
+                <p>ابحث عن مشترك، استعرض التقارير المالية، أو أضف التسويات الشهرية الملحقة</p>
             </div>
 
-            <div class="card" id="financial-report-card" style="margin-top: 15px; border-top: 4px solid var(--green-success);">
-                <h3 style="margin-bottom: 15px;"><i class="fa-solid fa-chart-line text-green"></i> لوحة حساب الأرباح والتقرير المالي العام</h3>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
-                    <div class="form-group" style="margin:0;">
-                        <label style="font-size: 12px; font-weight: 600; color: #444;">إجمالي الفاتورة من فودافون (يدوياً للمقارنة)</label>
-                        <input type="number" id="manual-invoice-input" class="form-control" placeholder="أدخل القيمة لمقارنتها بالإكسيل">
-                    </div>
-                    <div class="form-group" style="margin:0;">
-                        <label style="font-size: 12px; font-weight: 600; color: #444;">مبالغ إضافية تحصيلية (إيرادات إضافية للحساب)</label>
-                        <input type="number" id="additional-revenue-input" class="form-control" placeholder="0.00">
-                    </div>
-                    <div class="form-group" style="margin:0;">
-                        <label style="font-size: 12px; font-weight: 600; color: #444;">مصاريف/دمغات إضافية (تضاف لتكلفة الفاتورة)</label>
-                        <input type="number" id="additional-expenses-input" class="form-control" placeholder="0.00">
+            <div class="grid-3">
+                <div class="card" style="grid-column: span 2;">
+                    <h3>البحث السريع في قاعدة البيانات التراكمية</h3>
+                    <div class="search-box">
+                        <input type="text" id="global-search-input" placeholder="أدخل رقم الهاتف أو اسم المشترك للبحث الفوري...">
+                        <select id="search-month-select" class="form-control" style="width: 200px;">
+                            <option value="all">كل الأشهر المتاحة</option>
+                        </select>
+                        <button class="btn btn-red" onclick="executeGlobalSearch()"><i class="fa-solid fa-magnifying-glass"></i> استعلام</button>
                     </div>
                 </div>
 
-                <button class="btn btn-green" id="save-financials-btn" onclick="saveExtraFinancials()" style="margin-top: 10px; margin-bottom: 15px; width: 100%;">
-                    <i class="fa-solid fa-floppy-disk"></i> حفظ الحسابات الإضافية والأرباح لهذا الشهر
-                </button>
-
-                <div id="financial-report-results" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-top: 15px;"></div>
+                <div class="card">
+                    <h3>تسويات مالية إضافية للشهر</h3>
+                    <div class="form-group"><label>فاتورة الإكسيل اليدوية</label><input type="number" id="manual-invoice-input" class="form-control" placeholder="0.00"></div>
+                    <div class="grid-2" style="gap:10px;">
+                        <div class="form-group"><label>إيرادات أخرى</label><input type="number" id="additional-revenue-input" class="form-control" placeholder="0.00"></div>
+                        <div class="form-group"><label>مصروفات أخرى</label><input type="number" id="additional-expenses-input" class="form-control" placeholder="0.00"></div>
+                    </div>
+                    <button class="btn btn-outline" style="width:100%;" onclick="saveExtraFinancials()"><i class="fa-solid fa-floppy-disk"></i> حفظ التسوية الإضافية</button>
+                </div>
             </div>
-            
-            <div id="search-summary-area" style="display: none; margin-bottom: 20px;"></div>
-            <div id="search-results-area" style="margin-top: 20px;"></div>
-        </section>
 
-        <section id="invoices-screen" class="app-screen">
-            <h2><i class="fa-solid fa-file-invoice-dollar text-red"></i> استيراد ومعالجة الفواتير من Excel</h2>
+            <div id="search-results-area" style="margin-top:20px;"></div>
+
+            <div class="card" style="margin-top: 20px;">
+                <h3>التقرير المالي العام والأرباح التراكمية للمنظومة</h3>
+                <div class="grid-4" id="financial-report-results" style="margin-top:15px; gap:15px;">
+                    </div>
+            </div>
+        </div>
+
+        <div id="invoices-screen" class="app-screen">
+            <div class="header">
+                <h2>إدارة ومعالجة فواتير فودافون الشهرية</h2>
+                <p>ارفع ملفات فواتير الشركة بصيغة Excel، راجع البيانات، واعتمد المطالبات</p>
+            </div>
+
             <div class="grid-2">
                 <div class="card">
-                    <h3><i class="fa-solid fa-upload"></i> رفع ملف الفاتورة الشهرية</h3>
+                    <h3><i class="fa-solid fa-file-excel" style="color:#107c41;"></i> استيراد فاتورة شركة فودافون الجديدة</h3>
+                    <p style="font-size:13px; color:#666; margin-bottom:15px;">يرجى اختيار الشهر المالي المستهدف ثم رفع ملف الإكسيل المستخرج من موقع فودافون لربطه تلقائياً بدليل الأفراد.</p>
                     <div class="form-group">
-                        <label>تحديد شهر الفاتورة</label>
+                        <label>الشهر المالي المستهدف (مثال: 2026-05)</label>
                         <input type="month" id="invoice-month-select" class="form-control">
                     </div>
                     <div class="form-group">
-                        <label class="file-upload-label">
-                            <i class="fa-solid fa-file-excel" style="color: #008559;"></i> اضغط لرفع ملف (فاتورة 04-2026.xlsx)
-                            <input type="file" id="invoice-file-input" accept=".xlsx, .xls" onchange="handleInvoiceImport(event)">
-                        </label>
+                        <label>اختر ملف الـ Excel</label>
+                        <input type="file" id="invoice-excel-file" class="form-control" accept=".xlsx, .xls" onchange="handleInvoiceImport(event)">
                     </div>
+                    <button class="btn btn-red" style="width:100%; margin-top:10px;" onclick="saveProcessedInvoice()"><i class="fa-solid fa-cloud-arrow-up"></i> اعتماد وحفظ الفاتورة في قاعدة البيانات</button>
                 </div>
+
                 <div class="card">
-                    <h3><i class="fa-solid fa-trash-can"></i> إزالة الفواتير القديمة</h3>
+                    <h3><i class="fa-solid fa-trash-can" style="color:var(--primary-color);"></i> إيقاف أو مسح فواتير شهر مسجل</h3>
+                    <p style="font-size:13px; color:#666; margin-bottom:15px;">في حال رغبتك في إعادة رفع فاتورة شهر معين أو تصفير بياناته، اختر الشهر واضغط على مسح السجلات التراكمية.</p>
                     <div class="form-group">
-                        <label>اختر الشهر لحذف بياناته التراكمية</label>
+                        <label>اختر الشهر المالي المراد حذفه</label>
                         <select id="delete-invoice-month-select" class="form-control"></select>
                     </div>
-                    <button class="btn btn-red" onclick="deleteStoredInvoice()"><i class="fa-solid fa-trash"></i> مسح سجل الفاتورة نهائياً</button>
+                    <button class="btn btn-outline" style="width:100%; color:var(--primary-color); border-color:var(--primary-color); margin-top:33px;" onclick="deleteStoredInvoice()"><i class="fa-solid fa-triangle-exclamation"></i> مسح سجلات الشهر المالي المحدد نهائياً</button>
                 </div>
             </div>
 
-            <div class="card table-card" id="invoice-preview-card" style="display:none; margin-top: 20px;">
-                <div class="table-header">
-                    <div>
-                        <h3>لوحة معالجة وتدقيق الفاتورة المرفوعة</h3>
-                        <p style="font-size: 13px; color: #555;">يرجى مراجعة حالة الأرقام أدناه قبل الحفظ النهائي في النظام.</p>
-                    </div>
-                    <button class="btn btn-green" onclick="saveProcessedInvoice()"><i class="fa-solid fa-floppy-disk"></i> اعتماد وحفظ الفاتورة بالشهر</button>
-                </div>
-                <div class="table-wrapper">
+            <div class="card" id="invoice-preview-card" style="margin-top: 20px; display: none;">
+                <h3>معاينة وتحليل بيانات الملف المرفوع قبل الاعتماد الحسابي</h3>
+                <div style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
                     <table id="invoice-preview-table">
                         <thead>
                             <tr>
-                                <th>رقم الهاتف</th>
-                                <th>خطة الأسعار المرفقة</th>
-                                <th>قيمة المطالبة المالية</th>
-                                <th>حالة الاسم والتحقق في النظام</th>
+                                <th>رقم المشترك</th>
+                                <th>خطة الأسعار (Rate Plan)</th>
+                                <th>الفاتورة الفعلية (بعد الضريبة)</th>
+                                <th>حالة المطابقة مع دليل الأفراد</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
                     </table>
                 </div>
             </div>
-        </section>
+        </div>
 
-        <section id="collection-screen" class="app-screen">
-            <h2><i class="fa-solid fa-money-bill-wave text-red"></i> شاشة التحصيل المالي والسداد (على سعر الباقة المعتمد)</h2>
-            <div class="card filter-box">
-                <div class="form-group" style="flex: 1; margin: 0 10px;">
-                    <label>اختر شهر الاستحقاق الفعلي</label>
-                    <select id="collection-month-select" class="form-control"></select>
-                </div>
-                <button class="btn btn-green" onclick="payAllActiveInvoices()"><i class="fa-solid fa-check-double"></i> تحصيل وسداد كل الأرقام المتبقية معاً</button>
+        <div id="collection-screen" class="app-screen">
+            <div class="header">
+                <h2>شاشة التحصيل المالي المباشر والسداد الجماعي</h2>
+                <p>اختر الشهر المالي لإدارة عمليات السداد الفردي وتوثيق المبالغ المحصلة</p>
             </div>
 
-            <div class="card table-card" style="margin-top: 20px;">
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>الرقم</th>
-                                <th>الاسم</th>
-                                <th>سعر الباقة المعتمد</th>
-                                <th>الفاتورة الفعلية (إكسيل)</th>
-                                <th>المدفوع حتى الآن</th>
-                                <th>المطلوب والحالة</th>
-                                <th>إجراءات السداد / تعديل الحساب لتصفيره</th>
-                            </tr>
-                        </thead>
-                        <tbody id="collection-table-body"></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <section id="advance-screen" class="app-screen">
-            <h2><i class="fa-solid fa-wallet text-red"></i> محفظة الإيداع والدفع المقدم</h2>
-            <div class="card search-box">
-                <input type="text" id="advance-search-input" placeholder="ابحث برقم المحمول لإضافة رصيد مسبق...">
-                <button class="btn btn-red" onclick="searchForAdvance()"><i class="fa-solid fa-search"></i> استعلام</button>
-            </div>
-
-            <div id="advance-profile-card" class="card" style="display: none; margin-top: 20px;">
-                <div class="profile-header">
-                    <h3 id="advance-user-name">اسم العميل</h3>
-                    <p id="advance-user-phone">الرقم: </p>
-                </div>
-                <hr style="margin:15px 0; border: 0; border-top: 1px solid #eee;">
-                <div class="grid-2">
-                    <div class="metric">
-                        <label>إجمالي الرصيد المقدم الحالي</label>
-                        <h2 id="current-advance-balance" class="text-green">0.00 ج.م</h2>
-                    </div>
-                    <div>
-                        <div class="form-group">
-                            <label>شحن مبلغ إيداع جديد كدفعة مقدمة</label>
-                            <input type="number" id="new-advance-amount" class="form-control" placeholder="0.00">
-                        </div>
-                        <button class="btn btn-green" onclick="saveAdvancePayment()"><i class="fa-solid fa-plus"></i> حفظ الإيداع بالمحفظة</button>
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3>إدارة فواتير وتحصيلات الشهر</h3>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <select id="collection-month-select" class="form-control" style="width: 200px;" onchange="loadCollectionData()"></select>
+                        <button class="btn btn-green" onclick="payAllActiveInvoices()"><i class="fa-solid fa-check-double"></i> تحصيل وسداد الجميع بالكامل</button>
                     </div>
                 </div>
+                <table id="collection-table">
+                    <thead>
+                        <tr>
+                            <th>رقم الهاتف</th>
+                            <th>اسم المشترك</th>
+                            <th>سعر الباقة المعتمد</th>
+                            <th>فاتورة الإكسيل فعلياً</th>
+                            <th>المبلغ المسدد</th>
+                            <th>الحالة والمديونية المتبقية</th>
+                            <th>عملية تحصيل مخصصة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="collection-table-body"></tbody>
+                </table>
             </div>
-        </section>
+        </div>
 
-        <section id="settings-screen" class="app-screen">
-            <h2><i class="fa-solid fa-gear text-red"></i> الإعدادات وقاعدة بيانات الأفراد والباقات</h2>
+        <div id="advance-screen" class="app-screen">
+            <div class="header">
+                <h2>منظومة الدفع المقدم والمحافظ الماليّة الرقمية للأعضاء</h2>
+                <p>إيداع مبالغ مقدماً للمشتركين واستخدامها في السداد والتسويات الذكية التلقائية</p>
+            </div>
+
             <div class="grid-2">
                 <div class="card">
-                    <h3><i class="fa-solid fa-file-excel" style="color: #008559;"></i> استيراد دليل الأفراد الأساسي</h3>
-                    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">ارفع ملف Excel المسمى (الافراد والباقات.xlsx)</p>
-                    <div class="form-group">
-                        <label class="file-upload-label">
-                            <i class="fa-solid fa-cloud-arrow-up"></i> اختر ملف الأفراد (.xlsx)
-                            <input type="file" id="settings-file-input" accept=".xlsx, .xls" onchange="handleSettingsImport(event)">
-                        </label>
+                    <h3>شحن رصيد وإيداع مالي جديد بمحفظة العميل</h3>
+                    <div class="search-box" style="margin-top:15px; margin-bottom:15px;">
+                        <input type="text" id="advance-search-input" placeholder="أدخل رقم الهاتف المراد الشحن له...">
+                        <button class="btn btn-red" onclick="searchForAdvance()"><i class="fa-solid fa-magnifying-glass"></i> استعلام</button>
+                    </div>
+
+                    <div id="advance-profile-card" style="display:none; background:#fafafa; padding:15px; border-radius:8px; border:1px solid var(--gray-border);">
+                        <h4 id="advance-user-name" style="color:var(--text-color);">اسم المشترك</h4>
+                        <p id="advance-user-phone" style="font-size:13px; color:#666; margin-bottom:10px;">الرقم: </p>
+                        <p style="font-size:14px; font-weight:bold;">الرصيد الحالي بالمحفظة: <span id="current-advance-balance" style="color:var(--green-success);">0.00 ج.م</span></p>
+                        <hr style="margin:15px 0; border:0; border-top:1px solid #eee;">
+                        <div class="form-group">
+                            <label>المبلغ المراد شحنه وإيداعه (ج.م)</label>
+                            <input type="number" id="new-advance-amount" class="form-control" placeholder="أدخل قيمة المبلغ هنا...">
+                        </div>
+                        <button class="btn btn-green" style="width:100%; margin-top:10px;" onclick="saveAdvancePayment()"><i class="fa-solid fa-wallet"></i> حفظ وتأكيد إيداع الرصيد</button>
                     </div>
                 </div>
 
                 <div class="card">
-                    <h3><i class="fa-solid fa-user-plus"></i> إضافة رقم يدوي جديد للمنظومة</h3>
-                    <div class="grid-2">
-                        <input type="text" id="new-user-name" placeholder="الاسم الكامل" class="form-control">
-                        <input type="text" id="new-user-phone" placeholder="رقم الهاتف (11 رقم)" class="form-control">
-                        <input type="number" id="new-user-price" placeholder="سعر الباقة" class="form-control">
-                        <input type="text" id="new-user-plan" placeholder="خطة الأسعار" class="form-control">
+                    <h3>كشف الحساب التفصيلي للمشترك والسداد التلقائي الذكي</h3>
+                    <div class="search-box" style="margin-top:15px; margin-bottom:15px;">
+                        <input type="text" id="statement-search-input" placeholder="ابحث باسم أو رقم العميل لعرض كشف حسابه الكامل...">
+                        <button class="btn btn-red" onclick="generateDetailedStatement()"><i class="fa-solid fa-eye"></i> عرض كشف الحساب</button>
                     </div>
-                    <button class="btn btn-red" style="margin-top:15px; width:100%;" onclick="addNewUserFromSettings()"><i class="fa-solid fa-user-check"></i> إدراج الفرد في النظام</button>
-                </div>
-            </div>
 
-            <div class="card table-card" style="margin-top: 20px;">
-                <div class="table-header">
-                    <h3>دليل الهواتف والأفراد المعتمدين الحاليين</h3>
-                    <input type="text" id="settings-table-search" placeholder="تصفية سريعة بالاسم أو الرقم..." onkeyup="filterSettingsTable()" class="form-control" style="width: 300px; margin: 0;">
-                </div>
-                <div class="table-wrapper">
-                    <table id="settings-main-table">
-                        <thead>
-                            <tr>
-                                <th>الاسم</th>
-                                <th>الرقم</th>
-                                <th>سعر الباقة الأساسي</th>
-                                <th>خطة الأسعار المسجلة</th>
-                                <th>إجراءات الإدارة</th>
-                            </tr>
-                        </thead>
-                        <tbody id="settings-table-body"></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <section id="statement-screen" class="app-screen">
-            <h2><i class="fa-solid fa-file-lines text-red"></i> كشف حساب تفصيلي وحركة المشترك المخصصة</h2>
-            <div class="card search-box">
-                <input type="text" id="statement-search-input" placeholder="أدخل رقم الهاتف أو اسم المشترك لاستخراج كشف الحساب التراكمي...">
-                <button class="btn btn-red" onclick="generateDetailedStatement()"><i class="fa-solid fa-file-invoice"></i> استعراض كشف الحساب</button>
-            </div>
-
-            <div id="statement-output-area" style="margin-top: 20px; display: none;">
-                <div class="card" style="border-top: 4px solid var(--primary-color);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
-                        <div>
-                            <h3 id="statement-client-name" style="color: var(--text-color); font-size: 18px;">اسم المشترك: </h3>
-                            <p id="statement-client-phone" style="color: #666; font-size: 14px; margin-top: 5px;">رقم الهاتف: </p>
+                    <div id="statement-output-area" style="display:none;">
+                        <div style="background:#f4f4f4; padding:15px; border-radius:8px; margin-bottom:15px;" class="grid-2">
+                            <div>
+                                <h4 id="statement-client-name" style="margin-bottom:5px;">اسم المشترك:</h4>
+                                <p id="statement-client-phone" style="font-size:13px; color:#666;">رقم الهاتف:</p>
+                            </div>
+                            <div style="text-align: left;">
+                                <p style="font-size:14px; font-weight:bold;">رصيد محفظة الدفع المقدم: <span id="statement-wallet-balance" style="color:var(--green-success);">0.00 ج.م</span></p>
+                                <button id="statement-settle-btn" class="btn btn-green" style="padding:5px 10px; font-size:12px; margin-top:5px; display:none;" onclick="settleStatementDebtsWithWallet()"><i class="fa-solid fa-wand-magic-sparkles"></i> سداد الديون من المحفظة فوراً</button>
+                            </div>
                         </div>
-                        <button class="btn btn-outline" onclick="window.print()" style="color: var(--text-color); border-color: #ccc;">
-                            <i class="fa-solid fa-print"></i> طباعة كشف الحساب
-                        </button>
+
+                        <div class="grid-4" style="gap:10px; margin-bottom:15px; text-align:center;">
+                            <div style="background:#fff; padding:10px; border:1px solid #ddd; border-radius:6px;"><small style="color:#666;">مطلوب تراكمي</small><br><strong id="statement-total-required">0.00</strong></div>
+                            <div style="background:#fff; padding:10px; border:1px solid #ddd; border-radius:6px;"><small style="color:#666;">مسدد تراكمي</small><br><strong id="statement-total-paid" style="color:var(--green-success);">0.00</strong></div>
+                            <div style="background:#fff; padding:10px; border:1px solid #ddd; border-radius:6px;"><small style="color:#666;">مديونية معلقة</small><br><strong id="statement-total-debt" style="color:var(--primary-color);">0.00</strong></div>
+                        </div>
+
+                        <div style="max-height:200px; overflow-y:auto;">
+                            <table style="width:100%; font-size:13px;" id="statement-table">
+                                <thead>
+                                    <tr>
+                                        <th>الشهر</th>
+                                        <th>النظام</th>
+                                        <th>الباقة</th>
+                                        <th>الفاتورة</th>
+                                        <th>المدفوع</th>
+                                        <th>المتبقي</th>
+                                        <th>حالة الشهر المالي</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="statement-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="settings-screen" class="app-screen">
+            <div class="header">
+                <h2>دليل الأفراد، أسعار الباقات وإعدادات المنظومة الأساسية</h2>
+                <p>إدارة الحسابات الفردية، استيراد سجل الأفراد الجماعي وتعديل بيانات الاتصال الأساسية</p>
+            </div>
+
+            <div class="grid-3">
+                <div class="card" style="grid-column: span 1;">
+                    <h3>إدراج مشترك جديد يدوياً</h3>
+                    <div class="form-group"><label>اسم العميل / المشترك</label><input type="text" id="new-user-name" class="form-control" placeholder="الاسم ثلاثي..."></div>
+                    <div class="form-group"><label>رقم هاتف فودافون</label><input type="text" id="new-user-phone" class="form-control" placeholder="010XXXXXXXX"></div>
+                    <div class="form-group"><label>سعر الباقة المعتمد (ج.م)</label><input type="number" id="new-user-price" class="form-control" placeholder="0.00"></div>
+                    <div class="form-group"><label>اسم خطة الأسعار (Rate Plan)</label><input type="text" id="new-user-plan" class="form-control" placeholder="Red Business..."></div>
+                    <button class="btn btn-red" style="width:100%; margin-top:10px;" onclick="addNewUserFromSettings()"><i class="fa-solid fa-plus"></i> إضافة العميل للدليل</button>
+                </div>
+
+                <div class="card" style="grid-column: span 2;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3>دليل المشتركين والباقات المسجلة بالنظام</h3>
+                        <input type="text" id="settings-table-search" class="form-control" placeholder="تصفية وجدول الأفراد..." style="width: 220px;" onkeyup="filterSettingsTable()">
                     </div>
                     
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                        <div style="background: #f9f9f9; padding: 12px; border-radius: 6px; text-align: center; border: 1px solid #eee;">
-                            <span style="font-size: 12px; color: #777; display: block;">إجمالي الباقات تاريخياً</span>
-                            <strong id="statement-total-required" style="font-size: 16px; color: #333; display: block; margin-top: 5px;">0.00 ج.م</strong>
-                        </div>
-                        <div style="background: #e2f6ee; padding: 12px; border-radius: 6px; text-align: center; border: 1px solid #c3ecd9;">
-                            <span style="font-size: 12px; color: #008559; display: block;">إجمالي المدفوعات</span>
-                            <strong id="statement-total-paid" style="font-size: 16px; color: #008559; display: block; margin-top: 5px;">0.00 ج.م</strong>
-                        </div>
-                        <div style="background: #ffe5e5; padding: 12px; border-radius: 6px; text-align: center; border: 1px solid #fca5a5;">
-                            <span style="font-size: 12px; color: #b91c1c; display: block;">المديونية المتأخرة المعلقة</span>
-                            <strong id="statement-total-debt" style="font-size: 16px; color: #b91c1c; display: block; margin-top: 5px;">0.00 ج.م</strong>
-                        </div>
-                        <div style="background: #f0fdf4; padding: 12px; border-radius: 6px; text-align: center; border: 1px solid #bbf7d0;">
-                            <span style="font-size: 12px; color: #16a34a; display: block;">رصيد المحفظة الحالي</span>
-                            <strong id="statement-wallet-balance" style="font-size: 16px; color: #16a34a; display: block; margin-top: 5px;">0.00 ج.م</strong>
-                        </div>
+                    <div style="background: #fafafa; padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px dashed #ccc;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 5px;"><i class="fa-solid fa-file-import" style="color:#107c41;"></i> استيراد دليل أفراد جماعي من Excel</label>
+                        <input type="file" id="settings-import-excel" accept=".xlsx, .xls" class="form-control" onchange="handleSettingsImport(event)">
                     </div>
 
-                    <div style="margin-bottom: 15px; display: flex; justify-content: flex-end;">
-                        <button class="btn btn-green" id="statement-settle-btn" onclick="settleStatementDebtsWithWallet()" style="display: none;">
-                            <i class="fa-solid fa-wand-magic-sparkles"></i> سداد الديون التراكمية من المحفظة فوراً
-                        </button>
-                    </div>
-
-                    <div class="table-wrapper">
+                    <div style="max-height: 380px; overflow-y: auto;">
                         <table>
                             <thead>
                                 <tr>
-                                    <th>الشهر المالي</th>
-                                    <th>خطة الأسعار المرفقة</th>
-                                    <th>سعر الباقة المعتمد تاريخياً</th>
-                                    <th>الفاتورة الفعلية (إكسيل)</th>
-                                    <th>المبلغ المسدد</th>
-                                    <th>المديونية المتبقية</th>
-                                    <th>حالة الشهر المالي</th>
+                                    <th>اسم المشترك</th>
+                                    <th>رقم الهاتف</th>
+                                    <th>سعر الباقة المثبت</th>
+                                    <th>خطة الأسعار</th>
+                                    <th>إجراءات الحذف</th>
                                 </tr>
                             </thead>
-                            <tbody id="statement-table-body"></tbody>
+                            <tbody id="settings-table-body"></tbody>
                         </table>
                     </div>
                 </div>
             </div>
-        </section>
+        </div>
+
     </div>
 
-    <div id="edit-modal" class="modal">
+    <div class="modal" id="editClientModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>تعديل البيانات الأساسية للحساب</h3>
+                <h3>تعديل بيانات الحساب المالي للمشترك</h3>
                 <span class="close-modal" onclick="closeEditModal()">&times;</span>
             </div>
             <div class="modal-body">
@@ -323,5 +298,4 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="app.js"></script>
 </body>
-                        </html>
-                            
+</html>
