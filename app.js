@@ -18,92 +18,138 @@ const db = firebase.database();
 
 let currentParsedInvoice = [];
 let loadedGlobalSettings = {};
-let loadedAdvancePayments = {}; // المحفظة العالمية المزامنة للدفع المقدم
+let loadedAdvancePayments = {};
+let currentStatementPhone = "";
 
-// دالة لتصحيح أرقام الهواتف المجلوبة من إكسيل (إعادة الصفر المفقود في البداية)
+// ==========================================
+// دالة تنسيق رقم الهاتف
+// ==========================================
 function formatPhoneNumber(num) {
+
     if (!num) return '';
+
     let s = num.toString().trim();
-    if (s.endsWith('.0')) s = s.substring(0, s.length - 2);
-    if (s.length === 10 && (s.startsWith('1') || s.startsWith('2') || s.startsWith('5'))) {
+
+    if (s.endsWith('.0')) {
+        s = s.substring(0, s.length - 2);
+    }
+
+    if (
+        s.length === 10 &&
+        (
+            s.startsWith('1') ||
+            s.startsWith('2') ||
+            s.startsWith('5')
+        )
+    ) {
         s = '0' + s;
     }
+
     return s;
 }
 
 // ==========================================
-// [1] التحكم في التنقل والأحداث الرئيسية بالتحميل
+// [1] التحميل والتنقل
 // ==========================================
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
+
     const links = document.querySelectorAll('.sidebar .nav-links li');
+
     links.forEach(link => {
-        link.addEventListener('click', function() {
+
+        link.addEventListener('click', function () {
+
             links.forEach(l => l.classList.remove('active'));
+
             this.classList.add('active');
-            
+
             const target = this.getAttribute('data-target');
+
             document.querySelectorAll('.app-screen').forEach(screen => {
                 screen.classList.remove('active-screen');
             });
-            document.getElementById(target).classList.add('active-screen');
-            
-            if (target === 'settings-screen') loadSettingsTable();
-            if (target === 'collection-screen') loadCollectionData();
+
+            document
+                .getElementById(target)
+                .classList
+                .add('active-screen');
+
+            if (target === 'settings-screen') {
+                loadSettingsTable();
+            }
+
+            if (target === 'collection-screen') {
+                loadCollectionData();
+            }
+
             updateInvoiceMonthsDropdowns();
         });
     });
 
-    const searchSelect = document.getElementById('search-month-select');
-    if (searchSelect) {
-        searchSelect.addEventListener('change', loadExtraFinancialsForSelectedMonth);
-    }
-
-    const collSelect = document.getElementById('collection-month-select');
-    if (collSelect) {
-        collSelect.addEventListener('change', loadCollectionData);
-    }
-
     syncGlobalSettings();
-    syncAdvancePayments(); 
+    syncAdvancePayments();
     updateInvoiceMonthsDropdowns();
 });
 
+// ==========================================
+// مزامنة الإعدادات
+// ==========================================
 function syncGlobalSettings() {
+
     db.ref('settings').on('value', snapshot => {
+
         loadedGlobalSettings = snapshot.val() || {};
-        calculateFinancialReport(); 
+
+        calculateFinancialReport();
     });
 }
 
+// ==========================================
+// مزامنة المحفظة
+// ==========================================
 function syncAdvancePayments() {
+
     db.ref('advancePayments').on('value', snapshot => {
+
         loadedAdvancePayments = snapshot.val() || {};
     });
 }
 
 // ==========================================
-// [2] شاشة الإعدادات واستيراد الأفراد والباقات الافتراضية
+// [2] استيراد الإعدادات
 // ==========================================
 function handleSettingsImport(e) {
+
     const file = e.target.files[0];
+
     if (!file) return;
-    
+
     const reader = new FileReader();
-    reader.onload = function(evt) {
+
+    reader.onload = function (evt) {
+
         const data = new Uint8Array(evt.target.result);
+
         const workbook = XLSX.read(data, { type: 'array' });
+
         const firstSheetName = workbook.SheetNames[0];
+
         const worksheet = workbook.Sheets[firstSheetName];
+
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
-        
+
         processSettingsExcel(jsonData);
     };
+
     reader.readAsArrayBuffer(file);
 }
 
 function processSettingsExcel(data) {
+
     let importedCount = 0;
+
     data.forEach(row => {
+
         let name = row['الاسم'] || '';
         let rawPhone = row['الرقم'] || '';
         let price = row['سعر الباقه'] || 0;
@@ -112,104 +158,111 @@ function processSettingsExcel(data) {
         let phone = formatPhoneNumber(rawPhone);
 
         if (phone && name) {
+
             db.ref('settings/' + phone).set({
                 name: name,
                 price: parseFloat(price) || 0,
                 ratePlan: plan
             });
+
             importedCount++;
         }
     });
-    alert(`تم بنجاح استيراد وتحديث دليل عدد (${importedCount}) فرد من ملف الاكسيل.`);
+
+    alert(`تم استيراد عدد (${importedCount}) مشترك بنجاح`);
+
     loadSettingsTable();
 }
 
+// ==========================================
+// تحميل جدول الإعدادات
+// ==========================================
 function loadSettingsTable() {
+
     db.ref('settings').once('value', snapshot => {
+
         const data = snapshot.val() || {};
-        const tbody = document.getElementById('settings-table-body');
+
+        const tbody =
+            document.getElementById('settings-table-body');
+
         tbody.innerHTML = '';
-        
+
         for (let phone in data) {
+
             const user = data[phone];
+
             const tr = document.createElement('tr');
+
             tr.innerHTML = `
                 <td>${user.name}</td>
                 <td>${phone}</td>
                 <td>${user.price} ج.م</td>
                 <td>${user.ratePlan || 'غير محدد'}</td>
                 <td>
-                    <button class="btn btn-outline" style="padding:5px 10px; color:blue;" onclick="openEditModal('${phone}', '${user.name}', ${user.price}, '${user.ratePlan || ''}', '')"><i class="fa-solid fa-pen"></i> تعديل</button>
-                    <button class="btn btn-outline" style="padding:5px 10px; color:red;" onclick="deleteUser('${phone}')"><i class="fa-solid fa-trash"></i> حذف</button>
+                    <button onclick="deleteUser('${phone}')">
+                        حذف
+                    </button>
                 </td>
             `;
+
             tbody.appendChild(tr);
         }
     });
 }
 
-function filterSettingsTable() {
-    const filter = document.getElementById('settings-table-search').value.toLowerCase();
-    const rows = document.querySelectorAll('#settings-main-table tbody tr');
-    rows.forEach(row => {
-        row.style.display = row.innerText.toLowerCase().includes(filter) ? '' : 'none';
-    });
-}
-
-function addNewUserFromSettings() {
-    const name = document.getElementById('new-user-name').value.trim();
-    const phone = formatPhoneNumber(document.getElementById('new-user-phone').value.trim());
-    const price = parseFloat(document.getElementById('new-user-price').value) || 0;
-    const plan = document.getElementById('new-user-plan').value.trim();
-
-    if (!name || !phone) return alert("الرجاء تعبئة الاسم ورقم الهاتف على الأقل!");
-
-    db.ref('settings/' + phone).set({ name, price, ratePlan: plan }, () => {
-        alert("تم الحفظ بنجاح.");
-        loadSettingsTable();
-    });
-}
-
+// ==========================================
+// حذف مشترك
+// ==========================================
 function deleteUser(phone) {
-    if (confirm(`هل ترغب بحذف الرقم (${phone}) نهائياً من النظام؟`)) {
-        db.ref('settings/' + phone).remove(() => {
-            loadSettingsTable();
-            if(document.getElementById('global-search-input').value) executeGlobalSearch();
-            loadCollectionData();
-            calculateFinancialReport();
-        });
-    }
+
+    if (!confirm(`حذف ${phone} ؟`)) return;
+
+    db.ref('settings/' + phone).remove(() => {
+
+        loadSettingsTable();
+
+        calculateFinancialReport();
+    });
 }
 
 // ==========================================
-// [3] شاشة استيراد الفواتير ومعالجتها تلقائياً
+// [3] استيراد الفواتير
 // ==========================================
 function handleInvoiceImport(e) {
+
     const file = e.target.files[0];
+
     if (!file) return;
 
     currentParsedInvoice = [];
-    document.querySelector('#invoice-preview-table tbody').innerHTML = '<tr><td colspan="4" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> جاري معالجة وفحص أرقام الملف...</td></tr>';
 
     const reader = new FileReader();
-    reader.onload = function(evt) {
+
+    reader.onload = function (evt) {
+
         const data = new Uint8Array(evt.target.result);
+
         const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0]; 
+
+        const sheetName = workbook.SheetNames[0];
+
         const worksheet = workbook.Sheets[sheetName];
+
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
-        
+
         processInvoiceExcel(jsonData);
     };
+
     reader.readAsArrayBuffer(file);
 }
 
 function processInvoiceExcel(data) {
+
     currentParsedInvoice = [];
-    const tbody = document.querySelector('#invoice-preview-table tbody');
-    tbody.innerHTML = '';
 
     data.forEach(row => {
+
         let rawPhone = row['Mobile Number'] || '';
         let ratePlan = row['Rate Plan'] || '';
         let totalTaxes = row['Total After Taxes'] || 0;
@@ -217,42 +270,38 @@ function processInvoiceExcel(data) {
         let phone = formatPhoneNumber(rawPhone);
 
         if (phone) {
-            const matchedUser = loadedGlobalSettings[phone];
-            let statusBadge = '';
-
-            if (matchedUser) {
-                statusBadge = `<span class="badge badge-green"><i class="fa-solid fa-circle-check"></i> مسجل باسم: ${matchedUser.name}</span>`;
-            } else {
-                statusBadge = `<span class="badge badge-orange"><i class="fa-solid fa-circle-exclamation"></i> رقم جديد (سينزل بدون اسم لتسعيره لاحقاً)</span>`;
-            }
 
             currentParsedInvoice.push({
                 phone: phone,
                 ratePlan: ratePlan,
                 totalTaxes: parseFloat(totalTaxes) || 0
             });
-
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><strong>${phone}</strong></td>
-                <td>${ratePlan}</td>
-                <td>${totalTaxes} ج.م</td>
-                <td>${statusBadge}</td>
-            `;
-            tbody.appendChild(tr);
         }
     });
 
-    document.getElementById('invoice-preview-card').style.display = 'block';
+    alert("تم تحليل الفاتورة بنجاح");
 }
 
+// ==========================================
+// حفظ الفاتورة
+// ==========================================
 function saveProcessedInvoice() {
-    const month = document.getElementById('invoice-month-select').value;
-    if (!month) return alert("برجاء تحديد الشهر المالي للفاتورة أولاً.");
-    if (currentParsedInvoice.length === 0) return alert("لا توجد بيانات صالحة للحفظ.");
+
+    const month =
+        document.getElementById('invoice-month-select').value;
+
+    if (!month) {
+        return alert("اختر الشهر");
+    }
+
+    if (currentParsedInvoice.length === 0) {
+        return alert("لا توجد بيانات");
+    }
 
     currentParsedInvoice.forEach(item => {
+
         if (!loadedGlobalSettings[item.phone]) {
+
             db.ref('settings/' + item.phone).set({
                 name: "بدون اسم",
                 price: 0,
@@ -260,731 +309,444 @@ function saveProcessedInvoice() {
             });
         }
 
-        const user = loadedGlobalSettings[item.phone] || { price: 0 };
-        const requiredAmount = user.price; 
-        let advanceBalance = loadedAdvancePayments[item.phone] || 0; 
-        
-        let paid = 0;
-        let newStatus = "غير مدفوع";
+        const user =
+            loadedGlobalSettings[item.phone] || { price: 0 };
 
-        if (advanceBalance > 0 && requiredAmount > 0) {
-            if (advanceBalance >= requiredAmount) {
-                paid = requiredAmount;
-                advanceBalance -= requiredAmount;
-                newStatus = "مدفوع بالكامل";
-            } else {
-                paid = advanceBalance;
-                advanceBalance = 0;
-                newStatus = "مدفوع جزئياً";
-            }
-            db.ref('advancePayments/' + item.phone).set(advanceBalance);
-            loadedAdvancePayments[item.phone] = advanceBalance;
-        }
+        const requiredAmount = user.price;
 
         db.ref(`invoices/${month}/${item.phone}`).set({
             ratePlan: item.ratePlan,
             totalAfterTaxes: item.totalTaxes,
-            packagePrice: requiredAmount, 
-            paidAmount: paid,
-            status: newStatus
+            packagePrice: requiredAmount,
+            paidAmount: 0,
+            status: "غير مدفوع"
         });
     });
 
-    alert(`تم بنجاح اعتماد وحفظ فاتورة شهر (${month}) بالكامل وتأمين أسعار الباقات التاريخية.`);
-    
-    currentParsedInvoice = [];
-    document.getElementById('invoice-file-input').value = '';
-    document.querySelector('#invoice-preview-table tbody').innerHTML = '';
-    document.getElementById('invoice-preview-card').style.display = 'none';
-    updateInvoiceMonthsDropdowns();
-}
-
-function updateInvoiceMonthsDropdowns() {
-    db.ref('invoices').once('value', snapshot => {
-        const months = snapshot.val() || {};
-        const delSelect = document.getElementById('delete-invoice-month-select');
-        const collSelect = document.getElementById('collection-month-select');
-        const searchSelect = document.getElementById('search-month-select');
-        
-        if (delSelect) delSelect.innerHTML = '<option value="">-- اختر الشهر --</option>';
-        if (collSelect) collSelect.innerHTML = '<option value="">-- اختر الشهر --</option>';
-        if (searchSelect) searchSelect.innerHTML = '<option value="all">كل الأشهر المتاحة</option>';
-
-        for (let m in months) {
-            if (delSelect) delSelect.innerHTML += `<option value="${m}">${m}</option>`;
-            if (collSelect) collSelect.innerHTML += `<option value="${m}">${m}</option>`;
-            if (searchSelect) searchSelect.innerHTML += `<option value="${m}">${m}</option>`;
-        }
-        
-        loadExtraFinancialsForSelectedMonth();
-    });
-}
-
-function deleteStoredInvoice() {
-    const month = document.getElementById('delete-invoice-month-select').value;
-    if (!month) return alert("برجاء تحديد الشهر المراد حذفه.");
-    if (confirm(`هل أنت متأكد من رغبتك بحذف فاتورة شهر (${month}) نهائياً؟`)) {
-        db.ref(`invoices/${month}`).remove(() => {
-            alert("تم الحذف بنجاح.");
-            updateInvoiceMonthsDropdowns();
-            loadCollectionData();
-        });
-    }
+    alert("تم حفظ الفواتير");
 }
 
 // ==========================================
-// [4] شاشة التحصيل ومراجعة فوارق الـ 9 جنيهات
+// [4] شاشة التحصيل
 // ==========================================
 function loadCollectionData() {
-    const month = document.getElementById('collection-month-select').value;
-    const tbody = document.getElementById('collection-table-body');
+
+    const month =
+        document.getElementById('collection-month-select').value;
+
+    const tbody =
+        document.getElementById('collection-table-body');
+
     tbody.innerHTML = '';
+
     if (!month) return;
 
     db.ref(`invoices/${month}`).once('value', snapshot => {
+
         const invoices = snapshot.val() || {};
-        let activeRowsCount = 0;
 
         for (let phone in invoices) {
+
             const inv = invoices[phone];
-            const user = loadedGlobalSettings[phone] || { name: "بدون اسم", price: 0 };
-            
+
+            const user =
+                loadedGlobalSettings[phone] ||
+                { name: "بدون اسم", price: 0 };
+
             const paid = inv.paidAmount || 0;
-            const packageAmt = inv.packagePrice !== undefined ? parseFloat(inv.packagePrice) : parseFloat(user.price) || 0;
-            const remaining = packageAmt - paid; 
 
-            const invoiceAmt = parseFloat(inv.totalAfterTaxes) || 0;
-            const diffAmt = packageAmt - invoiceAmt; 
+            const packageAmt =
+                parseFloat(inv.packagePrice) || 0;
 
-            const isTargetForReview = (invoiceAmt >= packageAmt || (diffAmt >= 8.4 && diffAmt <= 9.6));
-            
-            if (packageAmt > 0 && remaining <= 0 && !isTargetForReview) continue; 
-
-            activeRowsCount++;
-            
-            let rowBgColor = ''; 
-            let comparisonHtml = '';
-            
-            if (packageAmt === 0) {
-                rowBgColor = 'background-color: #f3f4f6; border-right: 4px solid #6b7280;'; 
-                comparisonHtml = `<div style="color: #6b7280; font-size:11px; font-weight:bold;"><i class="fa-solid fa-circle-question"></i> خط غير مسعر (باقته 0 ج.م)</div>`;
-            } else if (isTargetForReview) {
-                rowBgColor = 'background-color: #fef2f2; border-right: 4px solid #dc2626;'; 
-                if (invoiceAmt >= packageAmt) {
-                    comparisonHtml = `<div style="color: #dc2626; font-size:11px; font-weight:bold; margin-top:3px;"><i class="fa-solid fa-triangle-exclamation"></i> تنبيه: الفاتورة أعلى أو تساوي الباقة (تعديل السعر مطلوب) ⚠️</div>`;
-                } else {
-                    comparisonHtml = `<div style="color: #b91c1c; font-size:11px; font-weight:bold; margin-top:3px;"><i class="fa-solid fa-circle-exclamation"></i> مراجعة: الفارق 9 جنيه تقريباً (تثبيت أو تعديل الباقة) ⚠️</div>`;
-                }
-            } else if (diffAmt > 0) {
-                rowBgColor = 'background-color: #f0fdf4; border-right: 4px solid #16a34a;'; 
-                comparisonHtml = `<div style="color: #16a34a; font-size:11px; font-weight:bold; margin-top:3px;"><i class="fa-solid fa-circle-check"></i> الباقة رابحة أعلى من الفاتورة بـ (${diffAmt.toFixed(2)} ج.م) ✨</div>`;
-            }
-            
-            let statusHtml = '';
-            if (remaining > 0) {
-                statusHtml = `<span class="badge badge-red" style="font-weight:bold;"><i class="fa-solid fa-hand-holding-dollar"></i> مدين مديونية: ${remaining.toFixed(2)} ج.م</span>`;
-            } else {
-                statusHtml = `<span class="badge badge-green"><i class="fa-solid fa-square-check"></i> مسدد للباقة بالكامل</span>`;
-            }
-            statusHtml += `${comparisonHtml}`;
-            
-            let cancelBtn = '';
-            if (paid > 0) {
-                cancelBtn = `<button class="btn btn-outline" style="padding:4px 8px; color:orange; margin-right:4px;" onclick="cancelPayment('${month}', '${phone}')"><i class="fa-solid fa-rotate-left"></i> إلغاء</button>`;
-            }
+            const remaining = packageAmt - paid;
 
             const tr = document.createElement('tr');
-            if (rowBgColor) tr.setAttribute('style', rowBgColor);
-            
+
             tr.innerHTML = `
                 <td>${phone}</td>
-                <td><strong>${user.name}</strong></td>
-                <td><strong class="text-blue">${packageAmt} ج.م</strong></td>
-                <td>${invoiceAmt} ج.م</td>
-                <td>${paid} ج.م</td>
-                <td>${statusHtml}</td>
+                <td>${user.name}</td>
+                <td>${packageAmt}</td>
+                <td>${paid}</td>
+                <td>${remaining}</td>
                 <td>
-                    <input type="number" id="pay-amt-${phone}" value="${remaining > 0 ? remaining.toFixed(2) : 0}" class="form-control" style="width:75px; display:inline-block; padding:4px;">
-                    <button class="btn btn-green" style="padding:5px 10px;" onclick="collectCustomPayment('${month}', '${phone}', ${packageAmt}, ${paid})">تسجيل</button>
-                    <button class="btn btn-outline" style="padding:5px 10px; color:blue;" onclick="openEditModal('${phone}', '${user.name}', ${packageAmt}, '${user.ratePlan || ''}', '${month}')"><i class="fa-solid fa-pen"></i> تعديل السعر</button>
-                    ${cancelBtn}
+                    <input
+                        type="number"
+                        id="pay-${phone}"
+                        value="0"
+                    >
+
+                    <button
+                        onclick="collectCustomPayment(
+                            '${month}',
+                            '${phone}',
+                            ${packageAmt},
+                            ${paid}
+                        )">
+                        تحصيل
+                    </button>
                 </td>
             `;
+
             tbody.appendChild(tr);
-        }
-        
-        if (activeRowsCount === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--green-success); font-weight:bold; padding:35px; font-size:16px;"><i class="fa-solid fa-square-check"></i> ممتاز! تمت تسوية كل الحسابات المتاحة لهذا الشهر!</td></tr>`;
         }
     });
 }
 
-function payAllActiveInvoices() {
-    const month = document.getElementById('collection-month-select').value;
-    if (!month) return alert("اختر الشهر أولاً.");
-    
-    if (confirm("هل تريد تسوية الحسابات الآمنة تلقائياً؟")) {
-        db.ref(`invoices/${month}`).once('value', snapshot => {
-            const data = snapshot.val() || {};
-            let updates = {};
-            let skippedCount = 0;
-            let processedCount = 0;
+// ==========================================
+// تسجيل دفعة
+// ==========================================
+function collectCustomPayment(
+    month,
+    phone,
+    requiredTotal,
+    alreadyPaid
+) {
 
-            for (let phone in data) {
-                const inv = data[phone];
-                const user = loadedGlobalSettings[phone] || { price: 0 };
-                
-                const invoiceAmt = parseFloat(inv.totalAfterTaxes) || 0;
-                const packageAmt = inv.packagePrice !== undefined ? parseFloat(inv.packagePrice) : parseFloat(user.price) || 0;
-                const diffAmt = packageAmt - invoiceAmt;
+    const amt =
+        parseFloat(
+            document.getElementById(`pay-${phone}`).value
+        );
 
-                if (invoiceAmt >= packageAmt || (diffAmt >= 8.4 && diffAmt <= 9.6)) {
-                    skippedCount++;
-                    continue; 
-                }
-
-                const paid = inv.paidAmount || 0;
-                if (paid < packageAmt) {
-                    updates[`invoices/${month}/${phone}/paidAmount`] = packageAmt;
-                    updates[`invoices/${month}/${phone}/status`] = "مدفوع بالكامل";
-                    processedCount++;
-                }
-            }
-
-            if (Object.keys(updates).length > 0) {
-                db.ref().update(updates, () => {
-                    alert(`تم تسوية وتحصيل عدد (${processedCount}) خط بنجاح وترك (${skippedCount}) خط للمراجعة.`);
-                    loadCollectionData();
-                    calculateFinancialReport();
-                });
-            }
-        });
+    if (isNaN(amt) || amt <= 0) {
+        return alert("ادخل قيمة صحيحة");
     }
-}
-
-function collectCustomPayment(month, phone, requiredTotal, alreadyPaid) {
-    const amt = parseFloat(document.getElementById(`pay-amt-${phone}`).value);
-    if (isNaN(amt) || amt < 0) return alert("برجاء إدخال قيمة صحيحة وموجبة.");
 
     const newPaid = alreadyPaid + amt;
-    const netDebt = requiredTotal - newPaid;
+
+    const newStatus =
+        newPaid >= requiredTotal
+            ? "مدفوع بالكامل"
+            : "مدفوع جزئياً";
 
     db.ref(`invoices/${month}/${phone}`).update({
         paidAmount: newPaid,
-        status: netDebt <= 0 ? "مدفوع بالكامل" : "مدفوع جزئياً"
+        status: newStatus
     }, () => {
-        alert("تم تسجيل عملية الدفع بنجاح.");
+
+        alert("تم التحصيل");
+
         loadCollectionData();
-        if (document.getElementById('global-search-input').value) executeGlobalSearch();
+
         calculateFinancialReport();
     });
 }
 
 // ==========================================
-// [5] شاشة الدفع المقدم (المحفظة الذكية لتسوية المديونيات)
+// [5] المحفظة
 // ==========================================
-function searchForAdvance() {
-    const filter = document.getElementById('advance-search-input').value.trim();
-    if (!filter) return alert("يرجى كتابة رقم الهاتف للاستعلام.");
-
-    let targetPhone = null;
-    let targetName = "بدون اسم";
-
-    for (let phone in loadedGlobalSettings) {
-        if (phone === filter || loadedGlobalSettings[phone].name.includes(filter)) {
-            targetPhone = phone;
-            targetName = loadedGlobalSettings[phone].name;
-            break;
-        }
-    }
-
-    if (!targetPhone) return alert("لم يتم العثور على الرقم بقاعدة البيانات!");
-
-    document.getElementById('advance-user-name').innerText = targetName;
-    document.getElementById('advance-user-phone').innerText = "رقم الحساب: " + targetPhone;
-
-    db.ref('advancePayments/' + targetPhone).once('value', snapshot => {
-        const bal = snapshot.val() || 0;
-        document.getElementById('current-advance-balance').innerText = bal.toFixed(2) + " ج.م";
-        document.getElementById('advance-profile-card').setAttribute('data-current-phone', targetPhone);
-        document.getElementById('advance-profile-card').style.display = 'block';
-    });
-}
-
 function saveAdvancePayment() {
-    const phone = document.getElementById('advance-profile-card').getAttribute('data-current-phone');
-    const amountToAdd = parseFloat(document.getElementById('new-advance-amount').value);
 
-    if (!phone || isNaN(amountToAdd) || amountToAdd <= 0) return alert("برجاء إدخال قيمة صحيحة.");
+    const phone =
+        document.getElementById('advance-phone').value;
 
-    db.ref('advancePayments/' + phone).once('value', snapshot => {
-        const currentWalletBalance = snapshot.val() || 0;
-        let totalAvailableBalance = currentWalletBalance + amountToAdd; 
+    const amount =
+        parseFloat(
+            document.getElementById('advance-amount').value
+        );
 
-        db.ref('invoices').once('value', invoiceSnapshot => {
-            const allInvoices = invoiceSnapshot.val() || {};
-            let updates = {};
-            let settledMonthsLog = [];
+    if (!phone || isNaN(amount) || amount <= 0) {
+        return alert("بيانات غير صحيحة");
+    }
 
-            for (let month in allInvoices) {
-                if (allInvoices[month][phone]) {
-                    const inv = allInvoices[month][phone];
-                    const userSetting = loadedGlobalSettings[phone] || { price: 0 };
-                    
-                    const requiredAmount = inv.packagePrice !== undefined ? inv.packagePrice : userSetting.price;
-                    const alreadyPaid = inv.paidAmount || 0;
-                    let remainingDebt = requiredAmount - alreadyPaid;
+    db.ref(`advancePayments/${phone}`).once('value', snapshot => {
 
-                    if (remainingDebt > 0 && totalAvailableBalance > 0) {
-                        if (totalAvailableBalance >= remainingDebt) {
-                            let newPaidAmount = alreadyPaid + remainingDebt;
-                            totalAvailableBalance -= remainingDebt;
+        const current = snapshot.val() || 0;
 
-                            updates[`invoices/${month}/${phone}/paidAmount`] = newPaidAmount;
-                            updates[`invoices/${month}/${phone}/status`] = "مدفوع بالكامل";
-                            settledMonthsLog.push(`شهر ${month} (كامل)`);
-                        } else {
-                            let newPaidAmount = alreadyPaid + totalAvailableBalance;
-                            totalAvailableBalance = 0;
-
-                            updates[`invoices/${month}/${phone}/paidAmount`] = newPaidAmount;
-                            updates[`invoices/${month}/${phone}/status`] = "مدفوع جزئياً";
-                            settledMonthsLog.push(`شهر ${month} (جزئي)`);
-                        }
-                    }
-                }
+        db.ref(`advancePayments/${phone}`).set(
+            current + amount,
+            () => {
+                alert("تم إضافة الرصيد");
             }
-
-            updates[`advancePayments/${phone}`] = totalAvailableBalance;
-
-            db.ref().update(updates, (error) => {
-                if (error) {
-                    alert("حدث خطأ!");
-                } else {
-                    let alertMsg = `✨ تم الإيداع بنجاح!\n💰 المحفظة الحالية: ${totalAvailableBalance.toFixed(2)} ج.م\n`;
-                    if (settledMonthsLog.length > 0) {
-                        alertMsg += `\n🔄 تم تلقائياً خصم المديونيات المتأخرة وتصفية: ${settledMonthsLog.join('، ')}.`;
-                    }
-                    alert(alertMsg);
-
-                    document.getElementById('new-advance-amount').value = '';
-                    searchForAdvance();       
-                    loadCollectionData();     
-                    calculateFinancialReport();
-                }
-            });
-        });
-    });
-}
-
-// دالة جديدة لتصفية الحسابات المعلقة من رصيد المحفظة الحالي بضغطة زر
-function triggerWalletSettlement(phone) {
-    db.ref('advancePayments/' + phone).once('value', snapshot => {
-        let totalAvailableBalance = snapshot.val() || 0;
-        if (totalAvailableBalance <= 0) return alert("لا يوجد رصيد في المحفظة لإجراء التسوية.");
-
-        db.ref('invoices').once('value', invoiceSnapshot => {
-            const allInvoices = invoiceSnapshot.val() || {};
-            let updates = {};
-            let settledMonthsLog = [];
-
-            for (let month in allInvoices) {
-                if (allInvoices[month][phone]) {
-                    const inv = allInvoices[month][phone];
-                    const userSetting = loadedGlobalSettings[phone] || { price: 0 };
-                    
-                    const requiredAmount = inv.packagePrice !== undefined ? parseFloat(inv.packagePrice) : parseFloat(userSetting.price) || 0;
-                    const alreadyPaid = parseFloat(inv.paidAmount) || 0;
-                    let remainingDebt = requiredAmount - alreadyPaid;
-
-                    if (remainingDebt > 0 && totalAvailableBalance > 0) {
-                        if (totalAvailableBalance >= remainingDebt) {
-                            let newPaidAmount = alreadyPaid + remainingDebt;
-                            totalAvailableBalance -= remainingDebt;
-
-                            updates[`invoices/${month}/${phone}/paidAmount`] = newPaidAmount;
-                            updates[`invoices/${month}/${phone}/status`] = "مدفوع بالكامل";
-                            settledMonthsLog.push(`شهر ${month}`);
-                        } else {
-                            let newPaidAmount = alreadyPaid + totalAvailableBalance;
-                            totalAvailableBalance = 0;
-
-                            updates[`invoices/${month}/${phone}/paidAmount`] = newPaidAmount;
-                            updates[`invoices/${month}/${phone}/status`] = "مدفوع جزئياً";
-                            settledMonthsLog.push(`شهر ${month} (جزئي)`);
-                        }
-                    }
-                }
-            }
-
-            if (settledMonthsLog.length === 0) {
-                return alert("لم يتم العثور على مديونيات مستحقة السداد للرقم حالياً.");
-            }
-
-            updates[`advancePayments/${phone}`] = totalAvailableBalance;
-
-            db.ref().update(updates, (error) => {
-                if (error) {
-                    alert("حدث خطأ أثناء إجراء التسوية.");
-                } else {
-                    alert(`✨ تم بنجاح تصفية وسداد الفواتير المتأخرة من رصيد محفظة العميل القديم!\n🔄 الشهور التي تم سدادها: ${settledMonthsLog.join('، ')}\n💰 رصيد المحفظة المتبقي والآمن الآن: ${totalAvailableBalance.toFixed(2)} ج.م`);
-                    if (document.getElementById('global-search-input').value) executeGlobalSearch();
-                    loadCollectionData();
-                    calculateFinancialReport();
-                }
-            });
-        });
+        );
     });
 }
 
 // ==========================================
-// [6] شاشة البحث الشامل وكشف الحساب المطور
+// [6] التقارير
 // ==========================================
-function saveExtraFinancials() {
-    const selectedMonth = document.getElementById('search-month-select').value;
-    if (!selectedMonth || selectedMonth === 'all') {
-        return alert("⚠️ يرجى اختيار شهر محدد لحفظ الإضافات المالية اليدوية.");
-    }
-
-    const manualInvoiceInput = parseFloat(document.getElementById('manual-invoice-input').value) || 0;
-    const additionalRevenue = parseFloat(document.getElementById('additional-revenue-input').value) || 0;
-    const additionalExpenses = parseFloat(document.getElementById('additional-expenses-input').value) || 0;
-
-    db.ref(`extraFinancials/${selectedMonth}`).set({
-        manualInvoice: manualInvoiceInput,
-        additionalRevenue: additionalRevenue,
-        additionalExpenses: additionalExpenses
-    }, (error) => {
-        if (!error) {
-            alert(`✨ تم الحفظ لشهر (${selectedMonth}).`);
-            calculateFinancialReport();
-        }
-    });
-}
-
-function loadExtraFinancialsForSelectedMonth() {
-    const selectedMonth = document.getElementById('search-month-select').value;
-    
-    if (!selectedMonth || selectedMonth === 'all') {
-        document.getElementById('manual-invoice-input').value = 0;
-        document.getElementById('additional-revenue-input').value = 0;
-        document.getElementById('additional-expenses-input').value = 0;
-        calculateFinancialReport();
-        return;
-    }
-
-    db.ref(`extraFinancials/${selectedMonth}`).once('value', snapshot => {
-        const extra = snapshot.val() || { manualInvoice: 0, additionalRevenue: 0, additionalExpenses: 0 };
-        document.getElementById('manual-invoice-input').value = extra.manualInvoice || 0;
-        document.getElementById('additional-revenue-input').value = extra.additionalRevenue || 0;
-        document.getElementById('additional-expenses-input').value = extra.additionalExpenses || 0;
-        calculateFinancialReport();
-    });
-}
-
 function calculateFinancialReport() {
-    const selectedMonth = document.getElementById('search-month-select').value;
-    const reportResults = document.getElementById('financial-report-results');
+
+    const reportResults =
+        document.getElementById('financial-report-results');
+
     if (!reportResults) return;
 
     db.ref('invoices').once('value', snapshot => {
+
         const allInvoices = snapshot.val() || {};
-        
-        let totalExcelInvoices = 0;
-        let totalApprovedPackages = 0;
 
-        for (let m in allInvoices) {
-            if (selectedMonth !== 'all' && m !== selectedMonth) continue;
-            
-            const monthData = allInvoices[m];
-            for (let phone in monthData) {
-                const inv = monthData[phone];
-                const user = loadedGlobalSettings[phone] || { price: 0 };
-                
-                totalExcelInvoices += parseFloat(inv.totalAfterTaxes) || 0;
-                const packageAmt = inv.packagePrice !== undefined ? parseFloat(inv.packagePrice) : parseFloat(user.price) || 0;
-                totalApprovedPackages += packageAmt;
+        let totalPackages = 0;
+        let totalInvoices = 0;
+        let totalPaid = 0;
+
+        for (let month in allInvoices) {
+
+            for (let phone in allInvoices[month]) {
+
+                const inv = allInvoices[month][phone];
+
+                totalPackages +=
+                    parseFloat(inv.packagePrice) || 0;
+
+                totalInvoices +=
+                    parseFloat(inv.totalAfterTaxes) || 0;
+
+                totalPaid +=
+                    parseFloat(inv.paidAmount) || 0;
             }
         }
 
-        const manualInvoiceInput = parseFloat(document.getElementById('manual-invoice-input').value) || 0;
-        const additionalRevenue = parseFloat(document.getElementById('additional-revenue-input').value) || 0;
-        const additionalExpenses = parseFloat(document.getElementById('additional-expenses-input').value) || 0;
-
-        const finalTotalPackages = totalApprovedPackages + additionalRevenue;
-        const finalTotalInvoice = totalExcelInvoices + additionalExpenses;
-        const netProfit = finalTotalPackages - finalTotalInvoice;
-
-        let comparisonBadge = '';
-        if (manualInvoiceInput > 0) {
-            const difference = manualInvoiceInput - totalExcelInvoices;
-            if (Math.abs(difference) < 0.1) {
-                comparisonBadge = `<div style="background:#d1e7dd; color:#0f5132; padding:4px; font-size:11px; font-weight:bold; border-radius:4px; margin-top:5px; text-align:center;"><i class="fa-solid fa-square-check"></i> متطابق مع الفاتورة اليدوية</div>`;
-            } else if (difference > 0) {
-                comparisonBadge = `<div style="background:#f8d7da; color:#842029; padding:4px; font-size:11px; font-weight:bold; border-radius:4px; margin-top:5px; text-align:center;"><i class="fa-solid fa-triangle-exclamation"></i> عجز باليدوية أكبر بـ ${difference.toFixed(2)} ج.م</div>`;
-            } else {
-                comparisonBadge = `<div style="background:#fff3cd; color:#664d03; padding:4px; font-size:11px; font-weight:bold; border-radius:4px; margin-top:5px; text-align:center;"><i class="fa-solid fa-info-circle"></i> وفر باليدوية أقل بـ ${Math.abs(difference).toFixed(2)} ج.م</div>`;
-            }
-        }
+        const profit = totalPackages - totalInvoices;
 
         reportResults.innerHTML = `
-            <div style="background: #ffffff; padding: 15px; border-radius: 8px; border-right: 5px solid #2563eb; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <span style="font-size: 11px; color: #666; display: block; font-weight: bold;">إجمالي الباقات المسعرة (+ إيراد إضافي)</span>
-                <strong style="font-size: 18px; color: #2563eb; display:block; margin-top:5px;">${finalTotalPackages.toFixed(2)} ج.م</strong>
-                <small style="font-size: 10px; color:#888;">الأساسي المعتمد: ${totalApprovedPackages.toFixed(2)}</small>
+            <div>
+                <h3>إجمالي الباقات</h3>
+                <strong>${totalPackages.toFixed(2)} ج.م</strong>
             </div>
-            <div style="background: #ffffff; padding: 15px; border-radius: 8px; border-right: 5px solid #dc2626; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <span style="font-size: 11px; color: #666; display: block; font-weight: bold;">إجمالي فواتير فودافون المرفوعة (+ مصاريف)</span>
-                <strong style="font-size: 18px; color: #dc2626; display:block; margin-top:5px;">${finalTotalInvoice.toFixed(2)} ج.م</strong>
-                <small style="font-size: 10px; color:#888;">من ملف إكسيل: ${totalExcelInvoices.toFixed(2)}</small>
-                ${comparisonBadge}
+
+            <div>
+                <h3>إجمالي الفواتير</h3>
+                <strong>${totalInvoices.toFixed(2)} ج.م</strong>
             </div>
-            <div style="background: ${netProfit >= 0 ? '#f0fdf4' : '#fef2f2'}; padding: 15px; border-radius: 8px; border-right: 5px solid ${netProfit >= 0 ? '#16a34a' : '#dc2626'}; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <span style="font-size: 11px; color: #666; display: block; font-weight: bold;">صافي أرباح الحساب التراكمية</span>
-                <strong style="font-size: 21px; color: ${netProfit >= 0 ? '#16a34a' : '#dc2626'}; display:block; margin-top:3px;">${netProfit.toFixed(2)} ج.م</strong>
-                <span style="font-size: 10px; font-weight:bold; color: ${netProfit >= 0 ? '#16a34a' : '#dc2626'};">${netProfit >= 0 ? '📈 صافي ربح إيجابي' : '📉 عجز مالي بالخلفية'}</span>
+
+            <div>
+                <h3>إجمالي المدفوع</h3>
+                <strong>${totalPaid.toFixed(2)} ج.م</strong>
+            </div>
+
+            <div>
+                <h3>صافي الربح</h3>
+                <strong>${profit.toFixed(2)} ج.م</strong>
             </div>
         `;
     });
 }
 
-function executeGlobalSearch() {
-    const filter = document.getElementById('global-search-input').value.trim().toLowerCase();
-    const selectedMonth = document.getElementById('search-month-select').value;
-    const resultsArea = document.getElementById('search-results-area');
-    const summaryArea = document.getElementById('search-summary-area');
-    
-    resultsArea.innerHTML = '';
-    summaryArea.innerHTML = '';
-    summaryArea.style.display = 'none';
+// =========================================================================
+// [8] كشف الحساب التفصيلي والسداد الذكي
+// =========================================================================
 
-    if (!filter) return alert("برجاء إدخال كلمة البحث أولاً.");
-    
-    let matchedCount = 0;
-    let totalPackagesSum = 0;
+function generateDetailedStatement() {
+
+    const input =
+        document
+        .getElementById('statement-search-input')
+        .value
+        .trim()
+        .toLowerCase();
+
+    const outputArea =
+        document.getElementById('statement-output-area');
+
+    const tbody =
+        document.getElementById('statement-table-body');
+
+    if (!input) {
+        return alert("يرجى إدخال اسم أو رقم");
+    }
+
+    let targetPhone = "";
+    let targetName = "";
 
     for (let phone in loadedGlobalSettings) {
-        const user = loadedGlobalSettings[phone];
-        const isMatch = phone.includes(filter) || user.name.toLowerCase().includes(filter);
-        
-        if (isMatch) {
-            matchedCount++;
-            totalPackagesSum += parseFloat(user.price) || 0;
 
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
-                    <h3><i class="fa-solid fa-id-card text-red"></i> المشترك: ${user.name}</h3>
-                    <div>
-                        <button class="btn btn-outline" style="color:blue; padding:5px 10px; margin-left:5px;" onclick="openEditModal('${phone}', '${user.name}', ${user.price}, '${user.ratePlan || ''}', '${selectedMonth !== 'all' ? selectedMonth : ''}')"><i class="fa-solid fa-pen"></i> تعديل البيانات</button>
-                        <button class="btn btn-outline" style="color:red; padding:5px 10px;" onclick="deleteUser('${phone}')"><i class="fa-solid fa-trash"></i> حذف</button>
-                    </div>
-                </div>
-                <p style="margin-bottom:10px;"><strong>رقم الموبايل:</strong> ${phone} | <strong>الخطة الأساسية:</strong> ${user.ratePlan || 'غير محدد'} | <strong>سعر الباقة الافتراضي:</strong> <span class="text-green">${user.price} ج.م</span></p>
-                
-                <div id="personal-summary-${phone}" style="margin-top: 10px; padding: 12px; border-radius: 6px; background: #f8fafc; border: 1px solid #e2e8f0; margin-bottom:15px;">
-                     <span style="font-size:12px; color:#aaa;"><i class="fa-solid fa-spinner fa-spin"></i> جاري استخراج تقارير المديونية والمحفظة...</span>
-                </div>
+        if (
+            phone === input ||
+            loadedGlobalSettings[phone]
+                .name
+                .toLowerCase()
+                .includes(input)
+        ) {
+            targetPhone = phone;
+            targetName =
+                loadedGlobalSettings[phone].name;
 
-                <div id="history-box-${phone}" style="margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
-                     <span style="font-size:12px; color:#999;"><i class="fa-solid fa-spinner fa-spin"></i> جاري تحميل السجل المالي الشهري...</span>
-                </div>
-            `;
-            resultsArea.appendChild(card);
-            fetchUserFinancialHistory(phone, selectedMonth);
+            break;
         }
     }
 
-    if (matchedCount > 0) {
-        summaryArea.innerHTML = `
-            <div class="card" style="background-color: #E2F6EE; border-color: var(--green-success); padding: 15px; display: flex; align-items: center; gap: 15px;">
-                <i class="fa-solid fa-calculator text-green" style="font-size: 24px;"></i>
-                <div>
-                    <span style="font-size: 13px; color: #555; display: block;">إجمالي قيمة الباقات المعتمدة للمشتركين الظاهرين بالبحث الحالية (${matchedCount} خطوط):</span>
-                    <strong style="font-size: 18px; color: var(--green-success);">${totalPackagesSum.toFixed(2)} ج.م</strong>
-                </div>
-            </div>`;
-        summaryArea.style.display = 'block';
-    } else {
-        resultsArea.innerHTML = `<div class="card" style="text-align:center; color:red; font-weight:bold;"><i class="fa-solid fa-triangle-exclamation"></i> لا توجد أي نتائج مطابقة للبحث.</div>`;
-    }
-}
+    if (!targetPhone) {
 
-function fetchUserFinancialHistory(phone, selectedMonth) {
+        outputArea.style.display = 'none';
+
+        return alert("المشترك غير موجود");
+    }
+
+    currentStatementPhone = targetPhone;
+
     db.ref('invoices').once('value', snapshot => {
-        const months = snapshot.val() || {};
-        const targetDiv = document.getElementById(`history-box-${phone}`);
-        const summaryDiv = document.getElementById(`personal-summary-${phone}`);
-        if (!targetDiv) return;
-        
-        let rows = '';
-        let totalUserDebts = 0;
 
-        for (let m in months) {
-            if (months[m][phone]) {
-                const inv = months[m][phone];
-                const user = loadedGlobalSettings[phone] || { price: 0 };
-                
-                const packageAmt = inv.packagePrice !== undefined ? parseFloat(inv.packagePrice) : parseFloat(user.price) || 0;
-                const remaining = packageAmt - (inv.paidAmount || 0);
-                
-                if (remaining > 0) {
-                    totalUserDebts += remaining;
-                }
+        const allInvoices = snapshot.val() || {};
 
-                if (selectedMonth !== 'all' && m !== selectedMonth) continue;
-                
-                let statusBadge = '';
-                let cancelBtnHtml = '';
+        tbody.innerHTML = "";
 
-                if (remaining <= 0) {
-                    statusBadge = '<span class="badge badge-green">تم سداد الباقة بالكامل</span>';
-                } else if ((inv.paidAmount || 0) > 0) {
-                    statusBadge = `<span class="badge badge-orange">مدفوع جزئياً (متبقي: ${remaining.toFixed(2)})</span>`;
-                } else {
-                    statusBadge = '<span class="badge badge-red">غير مدفوع</span>';
-                }
+        let totalRequired = 0;
+        let totalPaid = 0;
+        let totalDebt = 0;
 
-                if ((inv.paidAmount || 0) > 0) {
-                    cancelBtnHtml = `<button class="btn btn-outline" style="padding:2px 8px; font-size:11px; color:var(--primary-color); border-color:var(--primary-color);" onclick="cancelPayment('${m}', '${phone}')"><i class="fa-solid fa-rotate-left"></i> إلغاء السداد</button>`;
-                } else {
-                    cancelBtnHtml = `<span style="color:#aaa; font-size:11px;">لم يسدد بعد</span>`;
-                }
+        for (let month in allInvoices) {
 
-                rows += `
-                    <tr>
-                        <td>${m}</td>
-                        <td>${packageAmt} ج.م</td>
-                        <td>${inv.paidAmount || 0} ج.م</td>
-                        <td>${statusBadge}</td>
-                        <td style="text-align: center;">${cancelBtnHtml}</td>
-                    </tr>`;
-            }
-        }
-        
-        const walletBalance = loadedAdvancePayments[phone] || 0;
-        
-        if (summaryDiv) {
-            let netStatusText = '';
-            if (walletBalance > 0 && totalUserDebts === 0) {
-                netStatusText = `<span style="color: #008559; font-weight: bold;"><i class="fa-solid fa-circle-check"></i> الحساب مستقر (العميل سدد ما عليه وله رصيد مقدم متوفر بالمحفظة) ✨</span>`;
-            } else if (totalUserDebts > 0 && walletBalance === 0) {
-                netStatusText = `<span style="color: #E60000; font-weight: bold;"><i class="fa-solid fa-circle-exclamation"></i> العميل مدين للنظام ومستحق عليه مديونيات فواتير متأخرة ⚠️</span>`;
-            } else if (totalUserDebts > 0 && walletBalance > 0) {
-                // تعديل هنا لعرض زر الخصم المباشر الذكي فوراً للملفات القديمة المعلقة
-                netStatusText = `
-                    <span style="color: #b8860b; font-weight: bold;"><i class="fa-solid fa-triangle-exclamation"></i> حالة معلقة: توجد مديونية نشطة رغم وجود رصيد بالمحفظة (يرجى مراجعة التوزيع) ⚠️</span>
-                    <button class="btn btn-green" style="padding: 4px 10px; font-size: 11px; margin-top: 8px; display: block; cursor: pointer;" onclick="triggerWalletSettlement('${phone}')">
-                        <i class="fa-solid fa-bolt"></i> <strong>اضغط هنا لتسوية الفواتير القديمة من رصيد المحفظة الآن ⚡</strong>
-                    </button>
+            if (allInvoices[month][targetPhone]) {
+
+                const inv =
+                    allInvoices[month][targetPhone];
+
+                const packagePrice =
+                    parseFloat(inv.packagePrice) || 0;
+
+                const actualBill =
+                    parseFloat(inv.totalAfterTaxes) || 0;
+
+                const paidAmount =
+                    parseFloat(inv.paidAmount) || 0;
+
+                const remainingDebt =
+                    Math.max(0, packagePrice - paidAmount);
+
+                totalRequired += packagePrice;
+                totalPaid += paidAmount;
+                totalDebt += remainingDebt;
+
+                const tr = document.createElement('tr');
+
+                tr.innerHTML = `
+                    <td>${month}</td>
+                    <td>${inv.ratePlan || ''}</td>
+                    <td>${packagePrice}</td>
+                    <td>${actualBill}</td>
+                    <td>${paidAmount}</td>
+                    <td>${remainingDebt}</td>
                 `;
-            } else {
-                netStatusText = `<span style="color: #555;"><i class="fa-solid fa-check-double"></i> الحساب متزن تماماً (0 ج.م) لا دائن ولا مدين.</span>`;
+
+                tbody.appendChild(tr);
             }
-
-            summaryDiv.innerHTML = `
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 10px;">
-                    <div style="background: #E2F6EE; padding: 10px; border-radius: 6px; border-right: 4px solid #008559;">
-                        <span style="font-size: 11px; color: #555; display:block;">💰 رصيد المحفظة المتبقي (المقدم):</span>
-                        <strong style="font-size: 16px; color: #008559;">${walletBalance.toFixed(2)} ج.م</strong>
-                    </div>
-                    <div style="background: #FFE5E5; padding: 10px; border-radius: 6px; border-right: 4px solid #E60000;">
-                        <span style="font-size: 11px; color: #555; display:block;">⚠️ إجمالي المديونيات المتأخرة بالذمة:</span>
-                        <strong style="font-size: 16px; color: #E60000;">${totalUserDebts.toFixed(2)} ج.م</strong>
-                    </div>
-                </div>
-                <div style="font-size: 12px; background: #fff; padding: 8px; border-radius: 4px; border: 1px dashed #cbd5e1;">
-                    <strong>الوضعية المالية الإجمالية للخط:</strong> ${netStatusText}
-                </div>
-            `;
         }
 
-        if (rows === '') {
-            targetDiv.innerHTML = `<p style="font-size:12px; color:orange;"><i class="fa-solid fa-triangle-exclamation"></i> لا توجد فواتير مسجلة لهذا الرقم في النطاق المفلتر.</p>`;
+        const walletBalance =
+            loadedAdvancePayments[targetPhone] || 0;
+
+        document.getElementById(
+            'statement-client-name'
+        ).innerText = targetName;
+
+        document.getElementById(
+            'statement-client-phone'
+        ).innerText = targetPhone;
+
+        document.getElementById(
+            'statement-total-required'
+        ).innerText = totalRequired.toFixed(2);
+
+        document.getElementById(
+            'statement-total-paid'
+        ).innerText = totalPaid.toFixed(2);
+
+        document.getElementById(
+            'statement-total-debt'
+        ).innerText = totalDebt.toFixed(2);
+
+        document.getElementById(
+            'statement-wallet-balance'
+        ).innerText = walletBalance.toFixed(2);
+
+        const settleBtn =
+            document.getElementById('statement-settle-btn');
+
+        if (totalDebt > 0 && walletBalance > 0) {
+            settleBtn.style.display = 'inline-flex';
         } else {
-            targetDiv.innerHTML = `
-                <h4 style="font-size:13px; margin-top:10px; margin-bottom:5px; color:#555;"><i class="fa-solid fa-clock-history"></i> سجل تفاصيل الباقات والمدفوعات الشهري:</h4>
-                <table style="width:100%; font-size:12px;">
-                    <thead>
-                        <tr>
-                            <th>الشهر المالي</th>
-                            <th>قيمة الباقة المعتمدة</th>
-                            <th>المبلغ المدفوع فعلياً</th>
-                            <th>حالة السداد للعميل</th>
-                            <th style="text-align: center;">إجراءات إلغاء السداد</th>
-                        </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
-                </table>`;
+            settleBtn.style.display = 'none';
         }
+
+        outputArea.style.display = 'block';
     });
 }
 
-function cancelPayment(month, phone) {
-    if (confirm(`هل أنت متأكد من إلغاء سداد فاتورة الرقم (${phone}) لشهر (${month})؟`)) {
-        db.ref(`invoices/${month}/${phone}`).update({
-            paidAmount: 0,
-            status: "غير مدفوع"
-        }, () => {
-            alert("تم إلغاء السداد بنجاح وتصفير المبالغ للحساب.");
-            if (document.getElementById('global-search-input').value) executeGlobalSearch();
+// ==========================================
+// السداد الذكي من المحفظة
+// ==========================================
+function settleStatementDebtsWithWallet() {
+
+    if (!currentStatementPhone) return;
+
+    let walletBalance =
+        loadedAdvancePayments[currentStatementPhone] || 0;
+
+    if (walletBalance <= 0) {
+        return alert("رصيد المحفظة صفر");
+    }
+
+    db.ref('invoices').once('value', snapshot => {
+
+        const allInvoices = snapshot.val() || {};
+
+        let updates = {};
+
+        for (let month in allInvoices) {
+
+            if (
+                allInvoices[month][currentStatementPhone]
+                && walletBalance > 0
+            ) {
+
+                const inv =
+                    allInvoices[month][currentStatementPhone];
+
+                const packagePrice =
+                    parseFloat(inv.packagePrice) || 0;
+
+                const paidAmount =
+                    parseFloat(inv.paidAmount) || 0;
+
+                const remainingDebt =
+                    packagePrice - paidAmount;
+
+                if (remainingDebt > 0) {
+
+                    if (walletBalance >= remainingDebt) {
+
+                        walletBalance -= remainingDebt;
+
+                        updates[
+                            `invoices/${month}/${currentStatementPhone}/paidAmount`
+                        ] = packagePrice;
+
+                        updates[
+                            `invoices/${month}/${currentStatementPhone}/status`
+                        ] = "مدفوع بالكامل";
+
+                    } else {
+
+                        const newPaid =
+                            paidAmount + walletBalance;
+
+                        walletBalance = 0;
+
+                        updates[
+                            `invoices/${month}/${currentStatementPhone}/paidAmount`
+                        ] = newPaid;
+
+                        updates[
+                            `invoices/${month}/${currentStatementPhone}/status`
+                        ] = "مدفوع جزئياً";
+                    }
+                }
+            }
+        }
+
+        updates[
+            `advancePayments/${currentStatementPhone}`
+        ] = walletBalance;
+
+        db.ref().update(updates, () => {
+
+            alert("تم السداد الذكي بنجاح");
+
+            generateDetailedStatement();
+
             loadCollectionData();
+
             calculateFinancialReport();
         });
-    }
-}
-
-// ==========================================
-// [7] النوافذ المنبثقة (Modals) لتحديث السعر المزدوج
-// ==========================================
-function openEditModal(phone, name, price, plan, month = '') {
-    document.getElementById('edit-name').value = name;
-    document.getElementById('edit-phone').value = phone;
-    document.getElementById('edit-price').value = price;
-    document.getElementById('edit-plan').value = plan;
-    
-    document.getElementById('edit-modal').setAttribute('data-edit-month', month);
-    document.getElementById('edit-modal').style.display = 'flex';
-}
-
-function closeEditModal() {
-    document.getElementById('edit-modal').style.display = 'none';
-}
-
-function saveClientEdits() {
-    const phone = document.getElementById('edit-phone').value;
-    const name = document.getElementById('edit-name').value.trim();
-    const price = parseFloat(document.getElementById('edit-price').value) || 0;
-    const plan = document.getElementById('edit-plan').value.trim();
-    const month = document.getElementById('edit-modal').getAttribute('data-edit-month');
-
-    db.ref('settings/' + phone).update({ name, price, ratePlan: plan }, () => {
-        if (month) {
-            db.ref(`invoices/${month}/${phone}`).update({
-                packagePrice: price
-            }, () => {
-                db.ref(`invoices/${month}/${phone}`).once('value', snapshot => {
-                    const inv = snapshot.val() || {};
-                    const paid = inv.paidAmount || 0;
-                    const newStatus = paid >= price ? "مدفوع بالكامل" : (paid > 0 ? "مدفوع جزئياً" : "غير مدفوع");
-                    
-                    db.ref(`invoices/${month}/${phone}`).update({ status: newStatus }, () => {
-                        finalizeEdits();
-                    });
-                });
-            });
-        } else {
-            finalizeEdits();
-        }
     });
-
-    function finalizeEdits() {
-        alert("تم تعديل بيانات العميل بنجاح وتحديث الحسابات التاريخية والأرباح فورياً للعميل!");
-        closeEditModal();
-        loadSettingsTable();
-        loadCollectionData(); 
-        if(document.getElementById('global-search-input').value) executeGlobalSearch();
-        calculateFinancialReport();
-    }
 }
