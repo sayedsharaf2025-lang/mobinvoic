@@ -59,53 +59,58 @@
 
             <div class="card" style="margin-top: 20px;">
                 <h3>التقرير المالي العام والأرباح التراكمية للمنظومة</h3>
-                <div class="grid-4" id="financial-report-results" style="margin-top:15px; gap:15px;">
-                    </div>
+                <div class="grid-4" id="financial-report-results" style="margin-top:15px; gap:15px;"></div>
             </div>
         </div>
 
         <div id="invoices-screen" class="app-screen">
             <div class="header">
-                <h2>إدارة ومعالجة فواتير فودافون الشهرية</h2>
-                <p>ارفع ملفات فواتير الشركة بصيغة Excel، راجع البيانات، واعتمد المطالبات</p>
+                <h2>إدارة وتوليد فواتير فودافون الشهرية</h2>
+                <p>ولد الحسابات تلقائياً بناءً على دليل الباقات أو ارفع ملفات إكسيل فودافون لمطابقة التكلفة</p>
             </div>
 
-            <div class="grid-2">
+            <div class="grid-3">
                 <div class="card">
-                    <h3><i class="fa-solid fa-file-excel" style="color:#107c41;"></i> استيراد فاتورة شركة فودافون الجديدة</h3>
-                    <p style="font-size:13px; color:#666; margin-bottom:15px;">يرجى اختيار الشهر المالي المستهدف ثم رفع ملف الإكسيل المستخرج من موقع فودافون لربطه تلقائياً بدليل الأفراد.</p>
+                    <h3><i class="fa-solid fa-wand-magic-sparkles" style="color: #2563eb;"></i> 1. توليد كشوفات تلقائية</h3>
+                    <p style="font-size:13px; color:#666; margin-bottom:15px;">اختر الشهر المالي لإنشاء مطالبات مالية فورية وتلقائية لجميع المشتركين المسجلين بدليل الأفراد بناءً على أسعار باقاتهم الحالية.</p>
                     <div class="form-group">
-                        <label>الشهر المالي المستهدف (مثال: 2026-05)</label>
+                        <label>الشهر المالي المستهدف</label>
                         <input type="month" id="invoice-month-select" class="form-control">
                     </div>
+                    <button class="btn btn-outline" style="width:100%; color:#2563eb; border-color:#2563eb; margin-top:20px;" onclick="generateMonthlyInvoicesFromSettings()"><i class="fa-solid fa-gears"></i> توليد مطالبات الشهر الآن</button>
+                </div>
+
+                <div class="card">
+                    <h3><i class="fa-solid fa-file-excel" style="color:#107c41;"></i> 2. دمج ورفع إكسيل فودافون</h3>
+                    <p style="font-size:13px; color:#666; margin-bottom:15px;">ارفع ملف الفاتورة الفعلي لربط الأرقام وتحديث خانة التكلفة الحقيقية (بعد الضريبة) تلقائياً داخل كشوفات الشهر المسجلة.</p>
                     <div class="form-group">
                         <label>اختر ملف الـ Excel</label>
                         <input type="file" id="invoice-excel-file" class="form-control" accept=".xlsx, .xls" onchange="handleInvoiceImport(event)">
                     </div>
-                    <button class="btn btn-red" style="width:100%; margin-top:10px;" onclick="saveProcessedInvoice()"><i class="fa-solid fa-cloud-arrow-up"></i> اعتماد وحفظ الفاتورة في قاعدة البيانات</button>
+                    <button class="btn btn-red" style="width:100%; margin-top:10px;" onclick="saveProcessedInvoice()"><i class="fa-solid fa-cloud-arrow-up"></i> اعتماد ودمج الفاتورة الفعّالة</button>
                 </div>
 
                 <div class="card">
-                    <h3><i class="fa-solid fa-trash-can" style="color:var(--primary-color);"></i> إيقاف أو مسح فواتير شهر مسجل</h3>
-                    <p style="font-size:13px; color:#666; margin-bottom:15px;">في حال رغبتك في إعادة رفع فاتورة شهر معين أو تصفير بياناته، اختر الشهر واضغط على مسح السجلات التراكمية.</p>
+                    <h3><i class="fa-solid fa-trash-can" style="color:var(--primary-color);"></i> إزالة شهر مالي</h3>
+                    <p style="font-size:13px; color:#666; margin-bottom:15px;">في حال رغبتك في إعادة تصفير وإلغاء قيود وفواتير أي شهر مسجل، اختر الشهر واضغط مسح نهائي.</p>
                     <div class="form-group">
-                        <label>اختر الشهر المالي المراد حذفه</label>
+                        <label>اختر الشهر المالي</label>
                         <select id="delete-invoice-month-select" class="form-control"></select>
                     </div>
-                    <button class="btn btn-outline" style="width:100%; color:var(--primary-color); border-color:var(--primary-color); margin-top:33px;" onclick="deleteStoredInvoice()"><i class="fa-solid fa-triangle-exclamation"></i> مسح سجلات الشهر المالي المحدد نهائياً</button>
+                    <button class="btn btn-outline" style="width:100%; color:var(--primary-color); border-color:var(--primary-color); margin-top:20px;" onclick="deleteStoredInvoice()"><i class="fa-solid fa-triangle-exclamation"></i> حذف قيود الشهر نهائياً</button>
                 </div>
             </div>
 
             <div class="card" id="invoice-preview-card" style="margin-top: 20px; display: none;">
-                <h3>معاينة وتحليل بيانات الملف المرفوع قبل الاعتماد الحسابي</h3>
-                <div style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
+                <h3>معاينة وتحليل بيانات ملف إكسيل فودافون المرفوع</h3>
+                <div style="max-height: 300px; overflow-y: auto; margin-top: 15px;">
                     <table id="invoice-preview-table">
                         <thead>
                             <tr>
                                 <th>رقم المشترك</th>
                                 <th>خطة الأسعار (Rate Plan)</th>
-                                <th>الفاتورة الفعلية (بعد الضريبة)</th>
-                                <th>حالة المطابقة مع دليل الأفراد</th>
+                                <th>التكلفة الفعلية فودافون</th>
+                                <th>المشترك في دليل الأفراد</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -116,44 +121,46 @@
 
         <div id="collection-screen" class="app-screen">
             <div class="header">
-                <h2>شاشة التحصيل المالي المباشر والسداد الجماعي</h2>
-                <p>اختر الشهر المالي لإدارة عمليات السداد الفردي وتوثيق المبالغ المحصلة</p>
+                <h2>شاشة التحصيل المالي المباشر والسداد الجماعي والجزئي</h2>
+                <p>اختر الشهر المالي لإدارة الحسابات، وتوثيق السداد الجزئي أو الكلي فوراً للعملاء</p>
             </div>
 
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h3>إدارة فواتير وتحصيلات الشهر</h3>
+                    <h3>إدارة تحصيلات وكشوفات الشهر</h3>
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <select id="collection-month-select" class="form-control" style="width: 200px;" onchange="loadCollectionData()"></select>
                         <button class="btn btn-green" onclick="payAllActiveInvoices()"><i class="fa-solid fa-check-double"></i> تحصيل وسداد الجميع بالكامل</button>
                     </div>
                 </div>
-                <table id="collection-table">
-                    <thead>
-                        <tr>
-                            <th>رقم الهاتف</th>
-                            <th>اسم المشترك</th>
-                            <th>سعر الباقة المعتمد</th>
-                            <th>فاتورة الإكسيل فعلياً</th>
-                            <th>المبلغ المسدد</th>
-                            <th>الحالة والمديونية المتبقية</th>
-                            <th>عملية تحصيل مخصصة</th>
-                        </tr>
-                    </thead>
-                    <tbody id="collection-table-body"></tbody>
-                </table>
+                <div class="table-wrapper">
+                    <table id="collection-table">
+                        <thead>
+                            <tr>
+                                <th>رقم الهاتف</th>
+                                <th>اسم المشترك</th>
+                                <th>سعر الباقة المعتمد</th>
+                                <th>فاتورة الإكسيل فعلياً</th>
+                                <th>المبلغ المسدد تراكمياً</th>
+                                <th>الحالة والمتبقي المديوني</th>
+                                <th>تحصيل (كلي / جزئي)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="collection-table-body"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
         <div id="advance-screen" class="app-screen">
             <div class="header">
-                <h2>منظومة الدفع المقدم والمحافظ الماليّة الرقمية للأعضاء</h2>
-                <p>إيداع مبالغ مقدماً للمشتركين واستخدامها في السداد والتسويات الذكية التلقائية</p>
+                <h2>منظومة الدفع المقدم والمحافظ الرقمية للأعضاء</h2>
+                <p>إيداع مبالغ مقدماً واستخدامها في السداد والتسويات الذكية التلقائية للديون المعلقة</p>
             </div>
 
             <div class="grid-2">
                 <div class="card">
-                    <h3>شحن رصيد وإيداع مالي جديد بمحفظة العميل</h3>
+                    <h3>شحن رصيد وإيداع بمحفظة العميل</h3>
                     <div class="search-box" style="margin-top:15px; margin-bottom:15px;">
                         <input type="text" id="advance-search-input" placeholder="أدخل رقم الهاتف المراد الشحن له...">
                         <button class="btn btn-red" onclick="searchForAdvance()"><i class="fa-solid fa-magnifying-glass"></i> استعلام</button>
@@ -161,7 +168,7 @@
 
                     <div id="advance-profile-card" style="display:none; background:#fafafa; padding:15px; border-radius:8px; border:1px solid var(--gray-border);">
                         <h4 id="advance-user-name" style="color:var(--text-color);">اسم المشترك</h4>
-                        <p id="advance-user-phone" style="font-size:13px; color:#666; margin-bottom:10px;">الرقم: </p>
+                        <p id="advance-user-phone" style="font-size:13px; color:#666; margin-bottom:10px;">الرقم المالي: </p>
                         <p style="font-size:14px; font-weight:bold;">الرصيد الحالي بالمحفظة: <span id="current-advance-balance" style="color:var(--green-success);">0.00 ج.م</span></p>
                         <hr style="margin:15px 0; border:0; border-top:1px solid #eee;">
                         <div class="form-group">
@@ -173,9 +180,9 @@
                 </div>
 
                 <div class="card">
-                    <h3>كشف الحساب التفصيلي للمشترك والسداد التلقائي الذكي</h3>
+                    <h3>كشف الحساب التفصيلي للمشترك والسداد التلقائي من المحفظة</h3>
                     <div class="search-box" style="margin-top:15px; margin-bottom:15px;">
-                        <input type="text" id="statement-search-input" placeholder="ابحث باسم أو رقم العميل لعرض كشف حسابه الكامل...">
+                        <input type="text" id="statement-search-input" placeholder="ابحث باسم أو رقم العميل لعرض كشف حسابه...">
                         <button class="btn btn-red" onclick="generateDetailedStatement()"><i class="fa-solid fa-eye"></i> عرض كشف الحساب</button>
                     </div>
 
@@ -191,13 +198,13 @@
                             </div>
                         </div>
 
-                        <div class="grid-4" style="gap:10px; margin-bottom:15px; text-align:center;">
-                            <div style="background:#fff; padding:10px; border:1px solid #ddd; border-radius:6px;"><small style="color:#666;">مطلوب تراكمي</small><br><strong id="statement-total-required">0.00</strong></div>
-                            <div style="background:#fff; padding:10px; border:1px solid #ddd; border-radius:6px;"><small style="color:#666;">مسدد تراكمي</small><br><strong id="statement-total-paid" style="color:var(--green-success);">0.00</strong></div>
+                        <div class="grid-3" style="gap:10px; margin-bottom:15px; text-align:center;">
+                            <div style="background:#fff; padding:10px; border:1px solid #ddd; border-radius:6px;"><small style="color:#666;">مطلوب باقات تراكمي</small><br><strong id="statement-total-required">0.00</strong></div>
+                            <div style="background:#fff; padding:10px; border:1px solid #ddd; border-radius:6px;"><small style="color:#666;">Sample مسدد</small><br><strong id="statement-total-paid" style="color:var(--green-success);">0.00</strong></div>
                             <div style="background:#fff; padding:10px; border:1px solid #ddd; border-radius:6px;"><small style="color:#666;">مديونية معلقة</small><br><strong id="statement-total-debt" style="color:var(--primary-color);">0.00</strong></div>
                         </div>
 
-                        <div style="max-height:200px; overflow-y:auto;">
+                        <div style="max-height:180px; overflow-y:auto;">
                             <table style="width:100%; font-size:13px;" id="statement-table">
                                 <thead>
                                     <tr>
@@ -253,7 +260,7 @@
                                     <th>رقم الهاتف</th>
                                     <th>سعر الباقة المثبت</th>
                                     <th>خطة الأسعار</th>
-                                    <th>إجراءات الحذف</th>
+                                    <th>إجراءات الحذف والتعديل</th>
                                 </tr>
                             </thead>
                             <tbody id="settings-table-body"></tbody>
@@ -272,13 +279,10 @@
                 <span class="close-modal" onclick="closeEditModal()">&times;</span>
             </div>
             <div class="modal-body">
+                <input type="hidden" id="edit-phone">
                 <div class="form-group">
                     <label>الاسم</label>
                     <input type="text" id="edit-name" class="form-control">
-                </div>
-                <div class="form-group">
-                    <label>رقم الهاتف</label>
-                    <input type="text" id="edit-phone" class="form-control" disabled>
                 </div>
                 <div class="form-group">
                     <label>سعر الباقة المعتمد</label>
