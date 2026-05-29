@@ -182,7 +182,7 @@ function deleteUser(phone) {
 }
 
 // ==========================================
-// [3] شاشة استيراد الفواتير ومعالجتها تلقائياً بناء على حالة المحفظة التاريخية
+// [3] شاشة استيراد الفواتير ومعالجتها تلقائياً
 // ==========================================
 function handleInvoiceImport(e) {
     const file = e.target.files[0];
@@ -333,7 +333,7 @@ function deleteStoredInvoice() {
 }
 
 // ==========================================
-// [4] شاشة التحصيل ومراجعة فوارق الـ 9 جنيهات الذكية
+// [4] شاشة التحصيل ومراجعة فوارق الـ 9 جنيهات
 // ==========================================
 function loadCollectionData() {
     const month = document.getElementById('collection-month-select').value;
@@ -400,7 +400,7 @@ function loadCollectionData() {
                 <td>${phone}</td>
                 <td><strong>${user.name}</strong></td>
                 <td><strong class="text-blue">${packageAmt} ج.م</strong></td>
-                <td>${invoiceAmt} ج.m</td>
+                <td>${invoiceAmt} ج.م</td>
                 <td>${paid} ج.م</td>
                 <td>${statusHtml}</td>
                 <td>
@@ -481,7 +481,7 @@ function collectCustomPayment(month, phone, requiredTotal, alreadyPaid) {
 }
 
 // ==========================================
-// [5] شاشة الدفع المقدم (المحفظة الذكية لتسوية المديونيات المتأخرة)
+// [5] شاشة الدفع المقدم (المحفظة الذكية لتسوية المديونيات)
 // ==========================================
 function searchForAdvance() {
     const filter = document.getElementById('advance-search-input').value.trim();
@@ -577,8 +577,68 @@ function saveAdvancePayment() {
     });
 }
 
+// دالة جديدة لتصفية الحسابات المعلقة من رصيد المحفظة الحالي بضغطة زر
+function triggerWalletSettlement(phone) {
+    db.ref('advancePayments/' + phone).once('value', snapshot => {
+        let totalAvailableBalance = snapshot.val() || 0;
+        if (totalAvailableBalance <= 0) return alert("لا يوجد رصيد في المحفظة لإجراء التسوية.");
+
+        db.ref('invoices').once('value', invoiceSnapshot => {
+            const allInvoices = invoiceSnapshot.val() || {};
+            let updates = {};
+            let settledMonthsLog = [];
+
+            for (let month in allInvoices) {
+                if (allInvoices[month][phone]) {
+                    const inv = allInvoices[month][phone];
+                    const userSetting = loadedGlobalSettings[phone] || { price: 0 };
+                    
+                    const requiredAmount = inv.packagePrice !== undefined ? parseFloat(inv.packagePrice) : parseFloat(userSetting.price) || 0;
+                    const alreadyPaid = parseFloat(inv.paidAmount) || 0;
+                    let remainingDebt = requiredAmount - alreadyPaid;
+
+                    if (remainingDebt > 0 && totalAvailableBalance > 0) {
+                        if (totalAvailableBalance >= remainingDebt) {
+                            let newPaidAmount = alreadyPaid + remainingDebt;
+                            totalAvailableBalance -= remainingDebt;
+
+                            updates[`invoices/${month}/${phone}/paidAmount`] = newPaidAmount;
+                            updates[`invoices/${month}/${phone}/status`] = "مدفوع بالكامل";
+                            settledMonthsLog.push(`شهر ${month}`);
+                        } else {
+                            let newPaidAmount = alreadyPaid + totalAvailableBalance;
+                            totalAvailableBalance = 0;
+
+                            updates[`invoices/${month}/${phone}/paidAmount`] = newPaidAmount;
+                            updates[`invoices/${month}/${phone}/status`] = "مدفوع جزئياً";
+                            settledMonthsLog.push(`شهر ${month} (جزئي)`);
+                        }
+                    }
+                }
+            }
+
+            if (settledMonthsLog.length === 0) {
+                return alert("لم يتم العثور على مديونيات مستحقة السداد للرقم حالياً.");
+            }
+
+            updates[`advancePayments/${phone}`] = totalAvailableBalance;
+
+            db.ref().update(updates, (error) => {
+                if (error) {
+                    alert("حدث خطأ أثناء إجراء التسوية.");
+                } else {
+                    alert(`✨ تم بنجاح تصفية وسداد الفواتير المتأخرة من رصيد محفظة العميل القديم!\n🔄 الشهور التي تم سدادها: ${settledMonthsLog.join('، ')}\n💰 رصيد المحفظة المتبقي والآمن الآن: ${totalAvailableBalance.toFixed(2)} ج.م`);
+                    if (document.getElementById('global-search-input').value) executeGlobalSearch();
+                    loadCollectionData();
+                    calculateFinancialReport();
+                }
+            });
+        });
+    });
+}
+
 // ==========================================
-// [6] شاشة البحث الشامل وكشف الحساب المطور (استخراج تقارير المحفظة والمديونية الكاملة)
+// [6] شاشة البحث الشامل وكشف الحساب المطور
 // ==========================================
 function saveExtraFinancials() {
     const selectedMonth = document.getElementById('search-month-select').value;
@@ -721,7 +781,7 @@ function executeGlobalSearch() {
                         <button class="btn btn-outline" style="color:red; padding:5px 10px;" onclick="deleteUser('${phone}')"><i class="fa-solid fa-trash"></i> حذف</button>
                     </div>
                 </div>
-                <p style="margin-bottom:10px;"><strong>رقم الموبايل:</strong> ${phone} | <strong>الخطة الأساسية:</strong> ${user.ratePlan || 'غير مححدد'} | <strong>سعر الباقة الافتراضي:</strong> <span class="text-green">${user.price} ج.م</span></p>
+                <p style="margin-bottom:10px;"><strong>رقم الموبايل:</strong> ${phone} | <strong>الخطة الأساسية:</strong> ${user.ratePlan || 'غير محدد'} | <strong>سعر الباقة الافتراضي:</strong> <span class="text-green">${user.price} ج.م</span></p>
                 
                 <div id="personal-summary-${phone}" style="margin-top: 10px; padding: 12px; border-radius: 6px; background: #f8fafc; border: 1px solid #e2e8f0; margin-bottom:15px;">
                      <span style="font-size:12px; color:#aaa;"><i class="fa-solid fa-spinner fa-spin"></i> جاري استخراج تقارير المديونية والمحفظة...</span>
@@ -769,12 +829,10 @@ function fetchUserFinancialHistory(phone, selectedMonth) {
                 const packageAmt = inv.packagePrice !== undefined ? parseFloat(inv.packagePrice) : parseFloat(user.price) || 0;
                 const remaining = packageAmt - (inv.paidAmount || 0);
                 
-                // حساب المديونيات المتأخرة الفعلية المستحقة للخط عبر كل الفترات
                 if (remaining > 0) {
                     totalUserDebts += remaining;
                 }
 
-                // فلترة جدول العرض الشهري بناء على تصفية البحث الحالية
                 if (selectedMonth !== 'all' && m !== selectedMonth) continue;
                 
                 let statusBadge = '';
@@ -805,10 +863,8 @@ function fetchUserFinancialHistory(phone, selectedMonth) {
             }
         }
         
-        // جلب الرصيد المتبقي داخل المحفظة حالياً للخط من Firebase
         const walletBalance = loadedAdvancePayments[phone] || 0;
         
-        // طباعة التقرير الذكي والوضعية المالية في شاشة كشف الحساب
         if (summaryDiv) {
             let netStatusText = '';
             if (walletBalance > 0 && totalUserDebts === 0) {
@@ -816,7 +872,13 @@ function fetchUserFinancialHistory(phone, selectedMonth) {
             } else if (totalUserDebts > 0 && walletBalance === 0) {
                 netStatusText = `<span style="color: #E60000; font-weight: bold;"><i class="fa-solid fa-circle-exclamation"></i> العميل مدين للنظام ومستحق عليه مديونيات فواتير متأخرة ⚠️</span>`;
             } else if (totalUserDebts > 0 && walletBalance > 0) {
-                netStatusText = `<span style="color: #b8860b; font-weight: bold;"><i class="fa-solid fa-triangle-exclamation"></i> حالة معلقة: توجد مديونية نشطة رغم وجود رصيد بالمحفظة (يرجى مراجعة التوزيع) ⚠️</span>`;
+                // تعديل هنا لعرض زر الخصم المباشر الذكي فوراً للملفات القديمة المعلقة
+                netStatusText = `
+                    <span style="color: #b8860b; font-weight: bold;"><i class="fa-solid fa-triangle-exclamation"></i> حالة معلقة: توجد مديونية نشطة رغم وجود رصيد بالمحفظة (يرجى مراجعة التوزيع) ⚠️</span>
+                    <button class="btn btn-green" style="padding: 4px 10px; font-size: 11px; margin-top: 8px; display: block; cursor: pointer;" onclick="triggerWalletSettlement('${phone}')">
+                        <i class="fa-solid fa-bolt"></i> <strong>اضغط هنا لتسوية الفواتير القديمة من رصيد المحفظة الآن ⚡</strong>
+                    </button>
+                `;
             } else {
                 netStatusText = `<span style="color: #555;"><i class="fa-solid fa-check-double"></i> الحساب متزن تماماً (0 ج.م) لا دائن ولا مدين.</span>`;
             }
@@ -874,7 +936,7 @@ function cancelPayment(month, phone) {
 }
 
 // ==========================================
-// [7] النوافذ المنبثقة (Modals) لتحديث السعر المزدوج (الشهر الحالي + الافتراضي)
+// [7] النوافذ المنبثقة (Modals) لتحديث السعر المزدوج
 // ==========================================
 function openEditModal(phone, name, price, plan, month = '') {
     document.getElementById('edit-name').value = name;
