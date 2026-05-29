@@ -982,14 +982,22 @@ function saveClientEdits() {
         updates[`invoices/${_editTargetMonth}/${phone}/ratePlan`]     = plan;
     }
 
+    // حفظ الشهر قبل closeEditModal لأنها تمسحه
+    const targetMonth = _editTargetMonth;
+
     db.ref().update(updates, () => {
-        const msg = _editTargetMonth
-            ? `تم تحديث بيانات العميل وسعر باقته في شهر ${_editTargetMonth} بنجاح.`
+        const msg = targetMonth
+            ? `تم تحديث بيانات العميل وسعر باقته في شهر ${targetMonth} بنجاح.`
             : `تم تحديث بيانات العميل في الإعدادات بنجاح.`;
         alert(msg);
         closeEditModal();
         loadSettingsTable();
-        if (_editTargetMonth) loadCollectionData();
+        if (targetMonth) loadCollectionData();
+        // تحديث كشف الحساب إن كان مفتوحاً
+        const stmtArea = document.getElementById('statement-output-area');
+        if (targetMonth && stmtArea && stmtArea.style.display !== 'none') {
+            generateDetailedStatement();
+        }
         calculateFinancialReport();
     });
 }
