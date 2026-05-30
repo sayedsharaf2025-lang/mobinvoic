@@ -8,13 +8,13 @@
 // ==========================================
 
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-    projectId: "YOUR_PROJECT",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "XXXXXXXX",
-    appId: "XXXXXXXX"
+    apiKey: "AIzaSyBfFRxvmhg8aqtuDgXAOofFGpVPklUF",
+    authDomain: "mobile-invoic-118d4.firebaseapp.com",
+    databaseURL: "https://mobile-invoic-118d4-default-rtdb.firebaseio.com",
+    projectId: "mobile-invoic-118d4",
+    storageBucket: "mobile-invoic-118d4.firebasestorage.app",
+    messagingSenderId: "795305971254",
+    appId: "1:795305971254:web:7e8e874cfd805d33ec1297"
 };
 
 firebase.initializeApp(firebaseConfig);
