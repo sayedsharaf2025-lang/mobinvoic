@@ -1,8 +1,6 @@
-
 // ==========================================
 // Vodafone Invoice Manager Pro
-// app.js - Part 1
-// Firebase + Navigation + Dashboard + Customers
+// app.js - Fixed & Cleaned
 // ==========================================
 
 // ==========================================
@@ -27,10 +25,10 @@ const db = firebase.database();
 // Global Variables
 // ==========================================
 
-let allClients = {};
-let allInvoices = {};
-let allWallets = {};
-let allPayments = {};
+let allClients   = {};
+let allInvoices  = {};
+let allWallets   = {};
+let allPayments  = {};
 
 // ==========================================
 // DOM Ready
@@ -39,9 +37,7 @@ let allPayments = {};
 document.addEventListener("DOMContentLoaded", () => {
 
     initializeNavigation();
-
     initializeDarkMode();
-
     loadAllData();
 
 });
@@ -52,31 +48,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function initializeNavigation() {
 
-    const navItems =
-        document.querySelectorAll(".nav-links li");
+    const navItems = document.querySelectorAll(".nav-links li");
 
     navItems.forEach(item => {
 
         item.addEventListener("click", () => {
 
-            navItems.forEach(nav =>
-                nav.classList.remove("active")
-            );
-
+            navItems.forEach(nav => nav.classList.remove("active"));
             item.classList.add("active");
 
-            const target =
-                item.dataset.target;
+            const target = item.dataset.target;
 
-            document
-                .querySelectorAll(".app-screen")
-                .forEach(screen =>
-                    screen.classList.remove("active-screen")
-                );
+            document.querySelectorAll(".app-screen")
+                .forEach(screen => screen.classList.remove("active-screen"));
 
-            document
-                .getElementById(target)
-                .classList.add("active-screen");
+            const targetScreen = document.getElementById(target);
+            if (targetScreen) targetScreen.classList.add("active-screen");
+
+            // تحميل البيانات عند الانتقال للشاشات
+            if (target === "history-screen")  loadPaymentHistory();
+            if (target === "collection-screen") populateCollectionMonths();
+            if (target === "invoice-screen")    populateInvoiceMonths();
 
         });
 
@@ -90,27 +82,16 @@ function initializeNavigation() {
 
 function initializeDarkMode() {
 
-    const darkBtn =
-        document.getElementById("dark-mode-btn");
+    const darkBtn = document.getElementById("dark-mode-btn");
+    if (!darkBtn) return;
 
-    const saved =
-        localStorage.getItem("darkMode");
-
-    if (saved === "true") {
-
+    if (localStorage.getItem("darkMode") === "true") {
         document.body.classList.add("dark-mode");
-
     }
 
     darkBtn.addEventListener("click", () => {
-
         document.body.classList.toggle("dark-mode");
-
-        localStorage.setItem(
-            "darkMode",
-            document.body.classList.contains("dark-mode")
-        );
-
+        localStorage.setItem("darkMode", document.body.classList.contains("dark-mode"));
     });
 
 }
@@ -121,82 +102,25 @@ function initializeDarkMode() {
 
 function loadAllData() {
 
-    loadClients();
-
-    loadInvoices();
-
-    loadWallets();
-
-    loadPayments();
-
-}
-
-// ==========================================
-// Load Clients
-// ==========================================
-
-function loadClients() {
-
     db.ref("settings").on("value", snapshot => {
-
-        allClients =
-            snapshot.val() || {};
-
+        allClients = snapshot.val() || {};
         renderClientsTable();
-
         updateDashboard();
-
     });
-
-}
-
-// ==========================================
-// Load Invoices
-// ==========================================
-
-function loadInvoices() {
 
     db.ref("invoices").on("value", snapshot => {
-
-        allInvoices =
-            snapshot.val() || {};
-
+        allInvoices = snapshot.val() || {};
         updateDashboard();
-
     });
-
-}
-
-// ==========================================
-// Load Wallets
-// ==========================================
-
-function loadWallets() {
 
     db.ref("wallets").on("value", snapshot => {
-
-        allWallets =
-            snapshot.val() || {};
-
+        allWallets = snapshot.val() || {};
         updateDashboard();
-
     });
 
-}
-
-// ==========================================
-// Load Payments
-// ==========================================
-
-function loadPayments() {
-
     db.ref("payments").on("value", snapshot => {
-
-        allPayments =
-            snapshot.val() || {};
-
+        allPayments = snapshot.val() || {};
         updateDashboard();
-
     });
 
 }
@@ -207,16 +131,8 @@ function loadPayments() {
 
 function formatPhone(phone) {
 
-    let p =
-        phone.toString().trim();
-
-    if (
-        p.length === 10 &&
-        p.startsWith("1")
-    ) {
-        p = "0" + p;
-    }
-
+    let p = phone.toString().trim();
+    if (p.length === 10 && p.startsWith("1")) p = "0" + p;
     return p;
 
 }
@@ -227,85 +143,41 @@ function formatPhone(phone) {
 
 function addNewUser() {
 
-    const name =
-        document
-        .getElementById("new-user-name")
-        .value
-        .trim();
-
-    const phone =
-        formatPhone(
-            document
-            .getElementById("new-user-phone")
-            .value
-            .trim()
-        );
-
-    const price =
-        parseFloat(
-            document
-            .getElementById("new-user-price")
-            .value
-        ) || 0;
-
-    const plan =
-        document
-        .getElementById("new-user-plan")
-        .value
-        .trim();
+    const name  = document.getElementById("new-user-name").value.trim();
+    const phone = formatPhone(document.getElementById("new-user-phone").value.trim());
+    const price = parseFloat(document.getElementById("new-user-price").value) || 0;
+    const plan  = document.getElementById("new-user-plan").value.trim();
 
     if (!name || !phone) {
-
         alert("أدخل الاسم والرقم");
-
         return;
     }
 
     if (allClients[phone]) {
-
         alert("الرقم موجود مسبقاً");
-
         return;
     }
 
     db.ref("settings/" + phone)
-        .set({
-            name,
-            phone,
-            price,
-            plan
-        })
+        .set({ name, phone, price, plan })
         .then(() => {
-
             clearClientForm();
-
             alert("تم إضافة العميل");
-
-        });
+        })
+        .catch(err => alert("خطأ: " + err.message));
 
 }
 
 // ==========================================
-// Clear Form
+// Clear Client Form
 // ==========================================
 
 function clearClientForm() {
 
-    document.getElementById(
-        "new-user-name"
-    ).value = "";
-
-    document.getElementById(
-        "new-user-phone"
-    ).value = "";
-
-    document.getElementById(
-        "new-user-price"
-    ).value = "";
-
-    document.getElementById(
-        "new-user-plan"
-    ).value = "";
+    document.getElementById("new-user-name").value  = "";
+    document.getElementById("new-user-phone").value = "";
+    document.getElementById("new-user-price").value = "";
+    document.getElementById("new-user-plan").value  = "";
 
 }
 
@@ -315,60 +187,46 @@ function clearClientForm() {
 
 function renderClientsTable() {
 
-    const tbody =
-        document.getElementById(
-            "settings-table-body"
-        );
-
+    const tbody = document.getElementById("settings-table-body");
     if (!tbody) return;
+
+    const search = (document.getElementById("settings-table-search")?.value || "").toLowerCase();
 
     tbody.innerHTML = "";
 
-    Object.keys(allClients)
-        .sort()
-        .forEach(phone => {
+    Object.keys(allClients).sort().forEach(phone => {
 
-            const client =
-                allClients[phone];
+        const client = allClients[phone];
 
-            const tr =
-                document.createElement("tr");
+        if (
+            search &&
+            !client.name?.toLowerCase().includes(search) &&
+            !phone.includes(search)
+        ) return;
 
-            tr.innerHTML = `
+        const tr = document.createElement("tr");
 
-<td>${client.name || ""}</td>
+        tr.innerHTML = `
+            <td>${client.name  || ""}</td>
+            <td>${phone}</td>
+            <td>${client.price || 0}</td>
+            <td>${client.plan  || ""}</td>
+            <td>
+                <button class="btn btn-outline" onclick="editClient('${phone}')">تعديل</button>
+                <button class="btn btn-red"     onclick="deleteClient('${phone}')">حذف</button>
+            </td>
+        `;
 
-<td>${phone}</td>
+        tbody.appendChild(tr);
 
-<td>${client.price || 0}</td>
+    });
 
-<td>${client.plan || ""}</td>
-
-<td>
-
-<button
-class="btn btn-outline"
-onclick="editClient('${phone}')">
-
-تعديل
-
-</button>
-
-<button
-class="btn btn-red"
-onclick="deleteClient('${phone}')">
-
-حذف
-
-</button>
-
-</td>
-
-`;
-
-            tbody.appendChild(tr);
-
-        });
+    // ربط البحث الفوري
+    const searchInput = document.getElementById("settings-table-search");
+    if (searchInput && !searchInput.dataset.bound) {
+        searchInput.dataset.bound = "1";
+        searchInput.addEventListener("input", renderClientsTable);
+    }
 
 }
 
@@ -378,48 +236,29 @@ onclick="deleteClient('${phone}')">
 
 function deleteClient(phone) {
 
-    if (
-        !confirm("حذف العميل؟")
-    ) return;
+    if (!confirm("حذف العميل؟")) return;
 
     db.ref("settings/" + phone)
-        .remove();
+        .remove()
+        .catch(err => alert("خطأ: " + err.message));
 
 }
 
 // ==========================================
-// Edit Client
+// Edit Client  — يفتح المودال
 // ==========================================
 
 function editClient(phone) {
 
-    const client =
-        allClients[phone];
+    const client = allClients[phone];
+    if (!client) return;
 
-    document.getElementById(
-        "edit-name"
-    ).value =
-        client.name || "";
+    document.getElementById("edit-name").value  = client.name  || "";
+    document.getElementById("edit-phone").value = phone;
+    document.getElementById("edit-price").value = client.price || 0;
+    document.getElementById("edit-plan").value  = client.plan  || "";
 
-    document.getElementById(
-        "edit-phone"
-    ).value =
-        phone;
-
-    document.getElementById(
-        "edit-price"
-    ).value =
-        client.price || 0;
-
-    document.getElementById(
-        "edit-plan"
-    ).value =
-        client.plan || "";
-
-    document.getElementById(
-        "edit-modal"
-    ).style.display =
-        "flex";
+    document.getElementById("edit-modal").style.display = "flex";
 
 }
 
@@ -429,56 +268,30 @@ function editClient(phone) {
 
 function closeEditModal() {
 
-    document.getElementById(
-        "edit-modal"
-    ).style.display =
-        "none";
+    document.getElementById("edit-modal").style.display = "none";
 
 }
 
 // ==========================================
-// Save Client Edit
+// Save Client Edits
 // ==========================================
 
 function saveClientEdits() {
 
-    const phone =
-        document.getElementById(
-            "edit-phone"
-        ).value;
+    const phone = document.getElementById("edit-phone").value;
+    const name  = document.getElementById("edit-name").value.trim();
+    const price = parseFloat(document.getElementById("edit-price").value) || 0;
+    const plan  = document.getElementById("edit-plan").value.trim();
 
-    const name =
-        document.getElementById(
-            "edit-name"
-        ).value;
-
-    const price =
-        parseFloat(
-            document.getElementById(
-                "edit-price"
-            ).value
-        ) || 0;
-
-    const plan =
-        document.getElementById(
-            "edit-plan"
-        ).value;
+    if (!name) { alert("أدخل الاسم"); return; }
 
     db.ref("settings/" + phone)
-        .update({
-            name,
-            price,
-            plan
-        })
+        .update({ name, price, plan })
         .then(() => {
-
             closeEditModal();
-
-            alert(
-                "تم التعديل بنجاح"
-            );
-
-        });
+            alert("تم التعديل بنجاح");
+        })
+        .catch(err => alert("خطأ: " + err.message));
 
 }
 
@@ -488,1818 +301,442 @@ function saveClientEdits() {
 
 function updateDashboard() {
 
-    let totalClients =
-        Object.keys(allClients).length;
+    // العملاء والخطوط
+    const totalClients = Object.keys(allClients).length;
+    setText("total-clients", totalClients);
+    setText("total-lines",   totalClients);
 
+    // الفواتير
     let totalInvoices = 0;
+    Object.keys(allInvoices).forEach(month => {
+        totalInvoices += Object.keys(allInvoices[month]).length;
+    });
+    setText("total-invoices", totalInvoices);
 
+    // المدفوعات والمديونيات
+    let totalPaid  = 0;
+    let totalDebts = 0;
+
+    Object.keys(allInvoices).forEach(month => {
+        Object.values(allInvoices[month]).forEach(inv => {
+            const pkg  = Number(inv.packagePrice || 0);
+            const paid = Number(inv.paidAmount   || 0);
+            totalPaid  += paid;
+            if (paid < pkg) totalDebts += (pkg - paid);
+        });
+    });
+
+    setText("total-payments", totalPaid.toFixed(2));
+    setText("total-debts",    totalDebts.toFixed(2));
+
+    // صافي الربح = مجموع أسعار الباقات للعملاء
     let totalRevenue = 0;
+    Object.values(allClients).forEach(c => {
+        totalRevenue += Number(c.price || 0);
+    });
+    setText("net-profit", totalRevenue.toFixed(2));
 
-    Object.values(allClients)
-        .forEach(client => {
-
-            totalRevenue +=
-                Number(client.price || 0);
-
-        });
-
-    Object.keys(allInvoices)
-        .forEach(month => {
-
-            totalInvoices +=
-                Object.keys(
-                    allInvoices[month]
-                ).length;
-
-        });
-
-    setText(
-        "total-clients",
-        totalClients
-    );
-
-    setText(
-        "total-lines",
-        totalClients
-    );
-
-    setText(
-        "total-invoices",
-        totalInvoices
-    );
-
-    setText(
-        "net-profit",
-        totalRevenue.toFixed(2)
-    );
+    // الرسم البياني
+    renderProfitChart();
 
 }
 
 // ==========================================
-// Helper
+// Profit Chart
 // ==========================================
 
-function setText(id, value) {
+let profitChartInstance = null;
 
-    const el =
-        document.getElementById(id);
+function renderProfitChart() {
 
-    if (el)
-        el.innerText = value;
+    const ctx = document.getElementById("profitChart");
+    if (!ctx) return;
 
-}
-// ======================================
-// [2] إدارة العملاء
-// ======================================
-
-let clientsCache = {};
-
-function loadClients() {
-
-    const tbody = document.getElementById("clients-table-body");
-
-    if (!tbody) return;
-
-    db.ref("clients").on("value", snapshot => {
-
-        tbody.innerHTML = "";
-
-        clientsCache = snapshot.val() || {};
-
-        let count = 0;
-
-        Object.keys(clientsCache).forEach(phone => {
-
-            const client = clientsCache[phone];
-
-            count++;
-
-            tbody.innerHTML += `
-            <tr>
-                <td>${count}</td>
-                <td>${client.name || ""}</td>
-                <td>${phone}</td>
-                <td>${client.plan || "-"}</td>
-                <td>${client.price || 0} ج.م</td>
-                <td>
-
-                    <button class="btn btn-primary"
-                    onclick="editClient('${phone}')">
-                        تعديل
-                    </button>
-
-                    <button class="btn btn-danger"
-                    onclick="deleteClient('${phone}')">
-                        حذف
-                    </button>
-
-                </td>
-            </tr>
-            `;
-
+    const months = Object.keys(allInvoices).sort();
+    const revenues = months.map(month => {
+        let sum = 0;
+        Object.values(allInvoices[month]).forEach(inv => {
+            sum += Number(inv.paidAmount || 0);
         });
-
-        updateDashboardCounts();
-
+        return sum;
     });
 
-}
-
-
-// ======================================
-// إضافة عميل
-// ======================================
-
-function addClient() {
-
-    const name =
-        document.getElementById("client-name").value.trim();
-
-    const phone =
-        document.getElementById("client-phone").value.trim();
-
-    const plan =
-        document.getElementById("client-plan").value.trim();
-
-    const price =
-        parseFloat(
-            document.getElementById("client-price").value
-        ) || 0;
-
-    if (!name)
-        return alert("أدخل اسم العميل");
-
-    if (!phone)
-        return alert("أدخل رقم الهاتف");
-
-    db.ref("clients/" + phone)
-        .set({
-            name,
-            phone,
-            plan,
-            price,
-            createdAt: Date.now()
-        })
-        .then(() => {
-
-            alert("تم إضافة العميل");
-
-            clearClientForm();
-
-        });
-
-}
-
-
-// ======================================
-// تنظيف النموذج
-// ======================================
-
-function clearClientForm() {
-
-    document.getElementById("client-name").value = "";
-    document.getElementById("client-phone").value = "";
-    document.getElementById("client-plan").value = "";
-    document.getElementById("client-price").value = "";
-
-}
-
-
-// ======================================
-// حذف عميل
-// ======================================
-
-function deleteClient(phone) {
-
-    if (!confirm("هل تريد حذف العميل؟"))
-        return;
-
-    db.ref("clients/" + phone)
-        .remove()
-        .then(() => {
-
-            alert("تم الحذف");
-
-        });
-
-}
-
-
-// ======================================
-// تعديل عميل
-// ======================================
-
-function editClient(phone) {
-
-    const client = clientsCache[phone];
-
-    if (!client) return;
-
-    document.getElementById("edit-name").value =
-        client.name;
-
-    document.getElementById("edit-phone").value =
-        phone;
-
-    document.getElementById("edit-plan").value =
-        client.plan || "";
-
-    document.getElementById("edit-price").value =
-        client.price || 0;
-
-    document
-        .getElementById("editModal")
-        .classList.add("show");
-
-}
-
-
-// ======================================
-// حفظ التعديل
-// ======================================
-
-function saveClientEdit() {
-
-    const phone =
-        document.getElementById("edit-phone").value;
-
-    const name =
-        document.getElementById("edit-name").value;
-
-    const plan =
-        document.getElementById("edit-plan").value;
-
-    const price =
-        parseFloat(
-            document.getElementById("edit-price").value
-        ) || 0;
-
-    db.ref("clients/" + phone)
-        .update({
-            name,
-            plan,
-            price
-        })
-        .then(() => {
-
-            alert("تم التعديل");
-
-            closeEditModal();
-
-        });
-
-}
-
-
-// ======================================
-// غلق المودال
-// ======================================
-
-function closeEditModal() {
-
-    document
-        .getElementById("editModal")
-        .classList.remove("show");
-
-}
-
-
-// ======================================
-// البحث داخل العملاء
-// ======================================
-
-function searchClients() {
-
-    const search =
-        document
-            .getElementById("clients-search")
-            .value
-            .toLowerCase();
-
-    const rows =
-        document.querySelectorAll(
-            "#clients-table-body tr"
-        );
-
-    rows.forEach(row => {
-
-        if (
-            row.innerText
-                .toLowerCase()
-                .includes(search)
-        ) {
-
-            row.style.display = "";
-
-        } else {
-
-            row.style.display = "none";
-
+    if (profitChartInstance) profitChartInstance.destroy();
+
+    profitChartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: months,
+            datasets: [{
+                label: "المدفوعات الشهرية",
+                data: revenues,
+                backgroundColor: "#e60000",
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: true }
+            }
         }
-
     });
 
 }
 
+// ==========================================
+// Populate Month Selects
+// ==========================================
 
-// ======================================
-// عدادات Dashboard
-// ======================================
+function populateCollectionMonths() {
 
-function updateDashboardCounts() {
+    const sel = document.getElementById("collection-month-select");
+    if (!sel) return;
 
-    const clientsCount =
-        Object.keys(clientsCache).length;
+    sel.innerHTML = '<option value="">اختر الشهر</option>';
 
-    const el =
-        document.getElementById("dashboardClients");
-
-    if (el)
-        el.innerText = clientsCount;
+    Object.keys(allInvoices).sort().forEach(month => {
+        sel.innerHTML += `<option value="${month}">${month}</option>`;
+    });
 
 }
 
+function populateInvoiceMonths() {
 
-// ======================================
-// تحميل تلقائي
-// ======================================
+    const sel = document.getElementById("invoice-month-select");
+    if (!sel) return;
 
-document.addEventListener(
-    "DOMContentLoaded",
-    loadClients
-);
+    sel.innerHTML = '<option value="">اختر الشهر</option>';
+
+    // شهور افتراضية للاستيراد (12 شهر من الحالي)
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const label = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        sel.innerHTML += `<option value="${label}">${label}</option>`;
+    }
+
+}
+
 // ==========================================
-// [3] شاشة التحصيل Collection
+// Invoice Import (XLSX)
 // ==========================================
 
-async function loadCollectionMonth() {
+document.addEventListener("DOMContentLoaded", () => {
 
-    const month = document.getElementById("collectionMonth").value;
-    const tbody = document.getElementById("collectionTable");
+    const fileInput = document.getElementById("invoice-file-input");
+    if (fileInput) {
+        fileInput.addEventListener("change", function () {
+            previewInvoiceFile(this);
+        });
+    }
 
-    if (!month || !tbody) return;
+    const settingsFile = document.getElementById("settings-file-input");
+    if (settingsFile) {
+        settingsFile.addEventListener("change", function () {
+            importClientsFromExcel(this);
+        });
+    }
 
-    tbody.innerHTML = `
-        <tr>
-            <td colspan="8">جاري التحميل...</td>
-        </tr>
-    `;
+});
 
-    const snap = await db.ref(`invoices/${month}`).once("value");
+let parsedInvoiceData = [];
 
-    const invoices = snap.val() || {};
+function previewInvoiceFile(input) {
+
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function (e) {
+
+        const workbook = XLSX.read(e.target.result, { type: "binary" });
+        const sheet    = workbook.Sheets[workbook.SheetNames[0]];
+        const rows     = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        parsedInvoiceData = [];
+
+        const tbody = document.querySelector("#invoice-preview-table tbody");
+        if (tbody) tbody.innerHTML = "";
+
+        rows.slice(1).forEach(row => {
+
+            if (!row[0]) return;
+
+            const phone = formatPhone(String(row[0]));
+            const plan  = row[1] || "";
+            const price = parseFloat(row[2]) || 0;
+
+            parsedInvoiceData.push({ phone, plan, price });
+
+            const client  = allClients[phone];
+            const matched = client ? "متطابق" : "غير موجود";
+
+            if (tbody) {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${phone}</td>
+                        <td>${plan}</td>
+                        <td>${price}</td>
+                        <td>${matched}</td>
+                    </tr>
+                `;
+            }
+
+        });
+
+    };
+
+    reader.readAsBinaryString(file);
+
+}
+
+function saveProcessedInvoice() {
+
+    const month = document.getElementById("invoice-month-select").value;
+
+    if (!month) { alert("اختر الشهر"); return; }
+
+    if (parsedInvoiceData.length === 0) { alert("لا توجد بيانات للحفظ"); return; }
+
+    const updates = {};
+
+    parsedInvoiceData.forEach(item => {
+        updates[`invoices/${month}/${item.phone}`] = {
+            phone:        item.phone,
+            plan:         item.plan,
+            packagePrice: item.price,
+            paidAmount:   0,
+            status:       "غير مدفوع"
+        };
+    });
+
+    db.ref().update(updates)
+        .then(() => alert("تم حفظ الفواتير بنجاح"))
+        .catch(err => alert("خطأ: " + err.message));
+
+}
+
+// ==========================================
+// Import Clients from Excel
+// ==========================================
+
+function importClientsFromExcel(input) {
+
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = function (e) {
+
+        const workbook = XLSX.read(e.target.result, { type: "binary" });
+        const sheet    = workbook.Sheets[workbook.SheetNames[0]];
+        const rows     = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        const updates = {};
+
+        rows.slice(1).forEach(row => {
+            if (!row[0]) return;
+            const phone = formatPhone(String(row[0]));
+            updates["settings/" + phone] = {
+                name:  row[1] || "",
+                phone: phone,
+                price: parseFloat(row[2]) || 0,
+                plan:  row[3] || ""
+            };
+        });
+
+        db.ref().update(updates)
+            .then(() => alert("تم استيراد العملاء بنجاح"))
+            .catch(err => alert("خطأ: " + err.message));
+
+    };
+
+    reader.readAsBinaryString(file);
+
+}
+
+// ==========================================
+// Collection Screen
+// ==========================================
+
+function loadCollectionScreen() {
+
+    const month = document.getElementById("collection-month-select").value;
+    if (!month) return;
+
+    const tbody  = document.getElementById("collection-table-body");
+    if (!tbody) return;
 
     tbody.innerHTML = "";
 
-    let count = 0;
+    const invoices = allInvoices[month] || {};
 
-    for (const phone in invoices) {
+    if (Object.keys(invoices).length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7">لا توجد فواتير لهذا الشهر</td></tr>`;
+        return;
+    }
 
-        count++;
+    Object.keys(invoices).sort().forEach(phone => {
 
-        const invoice = invoices[phone];
+        const inv     = invoices[phone];
+        const client  = allClients[phone] || {};
+        const pkg     = Number(inv.packagePrice || client.price || 0);
+        const paid    = Number(inv.paidAmount   || 0);
+        const remain  = pkg - paid;
 
-        const customerSnap = await db.ref(`customers/${phone}`).once("value");
-
-        const customer = customerSnap.val() || {};
-
-        const packagePrice =
-            Number(invoice.packagePrice || customer.price || 0);
-
-        const paid =
-            Number(invoice.paidAmount || 0);
-
-        const remaining =
-            packagePrice - paid;
+        const badgeClass = remain <= 0 ? "badge-green" : "badge-red";
+        const statusText = remain <= 0 ? "مسدد" : "مديون";
 
         const tr = document.createElement("tr");
-
         tr.innerHTML = `
             <td>${phone}</td>
-            <td>${customer.name || "-"}</td>
-            <td>${packagePrice}</td>
+            <td>${client.name || "-"}</td>
+            <td>${pkg}</td>
             <td>${paid}</td>
-            <td>${remaining}</td>
+            <td><span class="badge ${badgeClass}">${statusText}</span></td>
             <td>
-                ${
-                    remaining <= 0
-                    ? '<span class="badge-success">مسدد</span>'
-                    : '<span class="badge-danger">مديون</span>'
-                }
+                <input type="number" id="pay-${phone}"
+                    value="${remain > 0 ? remain : 0}"
+                    style="width:100px;padding:6px;border-radius:8px;border:1px solid var(--border)">
             </td>
-
             <td>
-                <input
-                    type="number"
-                    id="pay-${phone}"
-                    value="${remaining > 0 ? remaining : 0}"
-                    class="small-input"
-                >
-            </td>
-
-            <td>
-
-                <button
-                    class="btn btn-success"
-                    onclick="collectPayment('${month}','${phone}')"
-                >
+                <button class="btn btn-green"
+                    onclick="collectPayment('${month}','${phone}')">
                     تحصيل
                 </button>
-
             </td>
         `;
 
         tbody.appendChild(tr);
-    }
 
-    if (count === 0) {
+    });
 
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="8">
-                    لا توجد بيانات
-                </td>
-            </tr>
-        `;
-    }
 }
+
+// ==========================================
+// Collect Payment
+// ==========================================
 
 async function collectPayment(month, phone) {
 
-    const amount =
-        Number(document.getElementById(`pay-${phone}`).value);
+    const input  = document.getElementById(`pay-${phone}`);
+    const amount = Number(input?.value || 0);
 
     if (!amount || amount <= 0) {
-        return alert("أدخل مبلغ صحيح");
+        alert("أدخل مبلغ صحيح");
+        return;
     }
 
-    const invoiceRef =
-        db.ref(`invoices/${month}/${phone}`);
+    try {
 
-    const snap =
-        await invoiceRef.once("value");
+        const snap    = await db.ref(`invoices/${month}/${phone}`).once("value");
+        const invoice = snap.val() || {};
 
-    const invoice =
-        snap.val();
+        const oldPaid = Number(invoice.paidAmount   || 0);
+        const pkg     = Number(invoice.packagePrice || 0);
+        const newPaid = oldPaid + amount;
 
-    const oldPaid =
-        Number(invoice.paidAmount || 0);
+        const status = newPaid >= pkg ? "مدفوع بالكامل" : "مدفوع جزئياً";
 
-    const newPaid =
-        oldPaid + amount;
+        await db.ref(`invoices/${month}/${phone}`).update({
+            paidAmount: newPaid,
+            status
+        });
 
-    const packagePrice =
-        Number(invoice.packagePrice || 0);
+        await savePaymentHistory(phone, month, amount, "تحصيل يدوي");
 
-    const status =
-        newPaid >= packagePrice
-            ? "مدفوع بالكامل"
-            : "مدفوع جزئياً";
+        alert("تم تسجيل التحصيل");
 
-    await invoiceRef.update({
-        paidAmount: newPaid,
-        status
-    });
+        loadCollectionScreen();
 
-    await savePaymentHistory(
-        phone,
-        month,
-        amount,
-        "تحصيل يدوي"
-    );
+    } catch (err) {
+        alert("خطأ: " + err.message);
+    }
 
-    alert("تم تسجيل التحصيل");
-
-    loadCollectionMonth();
-
-    loadDashboard();
 }
 
 // ==========================================
-// سجل المدفوعات
+// Pay All Active Invoices
 // ==========================================
 
-async function savePaymentHistory(
-    phone,
-    month,
-    amount,
-    type
-) {
+async function payAllActiveInvoices() {
 
-    const key =
-        db.ref("paymentHistory").push().key;
+    const month = document.getElementById("collection-month-select").value;
+    if (!month) { alert("اختر الشهر"); return; }
 
-    await db.ref(
-        `paymentHistory/${key}`
-    ).set({
+    const invoices = allInvoices[month] || {};
+    const updates  = {};
+    const histTasks = [];
 
+    Object.keys(invoices).forEach(phone => {
+
+        const inv    = invoices[phone];
+        const pkg    = Number(inv.packagePrice || 0);
+        const paid   = Number(inv.paidAmount   || 0);
+        const remain = pkg - paid;
+
+        if (remain > 0) {
+            updates[`invoices/${month}/${phone}/paidAmount`] = pkg;
+            updates[`invoices/${month}/${phone}/status`]     = "مدفوع بالكامل";
+            histTasks.push(savePaymentHistory(phone, month, remain, "تحصيل جماعي"));
+        }
+
+    });
+
+    if (Object.keys(updates).length === 0) {
+        alert("جميع الفواتير مسددة");
+        return;
+    }
+
+    try {
+        await db.ref().update(updates);
+        await Promise.all(histTasks);
+        alert("تم تحصيل جميع الفواتير");
+        loadCollectionScreen();
+    } catch (err) {
+        alert("خطأ: " + err.message);
+    }
+
+}
+
+// ==========================================
+// Payment History — Save
+// ==========================================
+
+async function savePaymentHistory(phone, month, amount, type) {
+
+    const key = db.ref("payments").push().key;
+
+    await db.ref(`payments/${key}`).set({
         phone,
         month,
         amount,
         type,
-
-        createdAt:
-            new Date().toISOString()
-
+        createdAt: new Date().toISOString()
     });
+
 }
+
+// ==========================================
+// Payment History — Load
+// ==========================================
 
 async function loadPaymentHistory() {
 
-    const tbody =
-        document.getElementById(
-            "paymentHistoryTable"
-        );
-
+    const tbody = document.getElementById("payment-history-body");
     if (!tbody) return;
 
-    const snap =
-        await db.ref(
-            "paymentHistory"
-        ).once("value");
+    try {
 
-    const data =
-        snap.val() || {};
+        const snap = await db.ref("payments").once("value");
+        const data = snap.val() || {};
 
-    tbody.innerHTML = "";
+        tbody.innerHTML = "";
 
-    Object.keys(data)
-        .reverse()
-        .forEach(key => {
+        Object.keys(data).reverse().forEach(key => {
 
             const row = data[key];
-
-            tbody.innerHTML += `
-                <tr>
-                    <td>${row.phone}</td>
-                    <td>${row.month}</td>
-                    <td>${row.amount}</td>
-                    <td>${row.type}</td>
-                    <td>${new Date(
-                        row.createdAt
-                    ).toLocaleString()}</td>
-                </tr>
-            `;
-        });
-}
-
-// ==========================================
-// المحفظة الذكية
-// ==========================================
-
-async function searchWalletCustomer() {
-
-    const keyword =
-        document.getElementById(
-            "walletSearch"
-        ).value.trim();
-
-    if (!keyword)
-        return alert("أدخل رقم أو اسم");
-
-    const snap =
-        await db.ref(
-            "customers"
-        ).once("value");
-
-    const customers =
-        snap.val() || {};
-
-    let foundPhone = null;
-
-    for (const phone in customers) {
-
-        const c = customers[phone];
-
-        if (
-            phone.includes(keyword) ||
-            c.name.includes(keyword)
-        ) {
-
-            foundPhone = phone;
-            break;
-        }
-    }
-
-    if (!foundPhone)
-        return alert("غير موجود");
-
-    const customer =
-        customers[foundPhone];
-
-    const walletSnap =
-        await db.ref(
-            `wallet/${foundPhone}`
-        ).once("value");
-
-    const balance =
-        Number(walletSnap.val() || 0);
-
-    document.getElementById(
-        "walletCustomerName"
-    ).innerText =
-        customer.name;
-
-    document.getElementById(
-        "walletCustomerPhone"
-    ).innerText =
-        foundPhone;
-
-    document.getElementById(
-        "walletBalance"
-    ).innerText =
-        balance.toFixed(2);
-
-    document
-        .getElementById("walletCard")
-        .setAttribute(
-            "data-phone",
-            foundPhone
-        );
-
-    document.getElementById(
-        "walletCard"
-    ).style.display = "block";
-}
-
-async function addWalletBalance() {
-
-    const card =
-        document.getElementById(
-            "walletCard"
-        );
-
-    const phone =
-        card.getAttribute(
-            "data-phone"
-        );
-
-    const amount =
-        Number(
-            document.getElementById(
-                "walletAmount"
-            ).value
-        );
-
-    if (!phone)
-        return alert("اختر عميل");
-
-    if (!amount || amount <= 0)
-        return alert("أدخل مبلغ");
-
-    const snap =
-        await db.ref(
-            `wallet/${phone}`
-        ).once("value");
-
-    const current =
-        Number(snap.val() || 0);
-
-    const newBalance =
-        current + amount;
-
-    await db.ref(
-        `wallet/${phone}`
-    ).set(newBalance);
-
-    await savePaymentHistory(
-        phone,
-        "رصيد مقدم",
-        amount,
-        "إيداع محفظة"
-    );
-
-    alert("تم الإيداع");
-
-    searchWalletCustomer();
-}
-
-// ==========================================
-// تسوية المحفظة تلقائياً
-// ==========================================
-
-async function settleWallet(phone) {
-
-    const walletSnap =
-        await db.ref(
-            `wallet/${phone}`
-        ).once("value");
-
-    let balance =
-        Number(walletSnap.val() || 0);
-
-    if (balance <= 0)
-        return alert(
-            "لا يوجد رصيد"
-        );
-
-    const invoicesSnap =
-        await db.ref(
-            "invoices"
-        ).once("value");
-
-    const invoices =
-        invoicesSnap.val() || {};
-
-    let settled = 0;
-
-    for (const month in invoices) {
-
-        if (!invoices[month][phone])
-            continue;
-
-        const inv =
-            invoices[month][phone];
-
-        const packagePrice =
-            Number(
-                inv.packagePrice || 0
-            );
-
-        const paid =
-            Number(
-                inv.paidAmount || 0
-            );
-
-        const debt =
-            packagePrice - paid;
-
-        if (debt <= 0)
-            continue;
-
-        if (balance <= 0)
-            break;
-
-        let payNow =
-            Math.min(balance, debt);
-
-        balance -= payNow;
-
-        const newPaid =
-            paid + payNow;
-
-        await db.ref(
-            `invoices/${month}/${phone}`
-        ).update({
-
-            paidAmount: newPaid,
-
-            status:
-                newPaid >= packagePrice
-                    ? "مدفوع بالكامل"
-                    : "مدفوع جزئياً"
-        });
-
-        await savePaymentHistory(
-            phone,
-            month,
-            payNow,
-            "خصم من المحفظة"
-        );
-
-        settled++;
-    }
-
-    await db.ref(
-        `wallet/${phone}`
-    ).set(balance);
-
-    alert(
-        `تمت تسوية ${settled} فاتورة`
-    );
-
-    loadDashboard();
-}
-
-// ==========================================
-// أحداث الصفحة
-// ==========================================
-
-document.addEventListener(
-    "DOMContentLoaded",
-    () => {
-
-        const collectionMonth =
-            document.getElementById(
-                "collectionMonth"
-            );
-
-        if (collectionMonth) {
-
-            collectionMonth
-                .addEventListener(
-                    "change",
-                    loadCollectionMonth
-                );
-        }
-    }
-);
-// ==========================================
-// [4] Dashboard & Reports
-// ==========================================
-
-async function loadDashboard() {
-
-    const totalCustomersEl =
-        document.getElementById("dashCustomers");
-
-    const totalInvoicesEl =
-        document.getElementById("dashInvoices");
-
-    const totalCollectedEl =
-        document.getElementById("dashCollected");
-
-    const totalDebtEl =
-        document.getElementById("dashDebt");
-
-    const totalProfitEl =
-        document.getElementById("dashProfit");
-
-    const customersSnap =
-        await db.ref("customers").once("value");
-
-    const customers =
-        customersSnap.val() || {};
-
-    const invoicesSnap =
-        await db.ref("invoices").once("value");
-
-    const invoices =
-        invoicesSnap.val() || {};
-
-    let customerCount = 0;
-    let invoiceTotal = 0;
-    let collectedTotal = 0;
-    let debtTotal = 0;
-
-    customerCount =
-        Object.keys(customers).length;
-
-    for (const month in invoices) {
-
-        for (const phone in invoices[month]) {
-
-            const inv =
-                invoices[month][phone];
-
-            const packagePrice =
-                Number(
-                    inv.packagePrice || 0
-                );
-
-            const paid =
-                Number(
-                    inv.paidAmount || 0
-                );
-
-            invoiceTotal += packagePrice;
-            collectedTotal += paid;
-
-            debtTotal +=
-                Math.max(
-                    packagePrice - paid,
-                    0
-                );
-        }
-    }
-
-    const profit =
-        collectedTotal - invoiceTotal;
-
-    if (totalCustomersEl)
-        totalCustomersEl.innerText =
-            customerCount;
-
-    if (totalInvoicesEl)
-        totalInvoicesEl.innerText =
-            invoiceTotal.toFixed(2);
-
-    if (totalCollectedEl)
-        totalCollectedEl.innerText =
-            collectedTotal.toFixed(2);
-
-    if (totalDebtEl)
-        totalDebtEl.innerText =
-            debtTotal.toFixed(2);
-
-    if (totalProfitEl)
-        totalProfitEl.innerText =
-            profit.toFixed(2);
-
-    loadRecentPayments();
-}
-
-// ==========================================
-// أحدث المدفوعات
-// ==========================================
-
-async function loadRecentPayments() {
-
-    const container =
-        document.getElementById(
-            "recentPayments"
-        );
-
-    if (!container) return;
-
-    const snap =
-        await db.ref(
-            "paymentHistory"
-        ).once("value");
-
-    const history =
-        snap.val() || {};
-
-    container.innerHTML = "";
-
-    Object.keys(history)
-        .reverse()
-        .slice(0, 10)
-        .forEach(key => {
-
-            const item =
-                history[key];
-
-            container.innerHTML += `
-                <div class="recent-item">
-                    <strong>${item.phone}</strong>
-                    <span>${item.amount} ج.م</span>
-                </div>
-            `;
-        });
-}
-
-// ==========================================
-// تقرير الأرباح
-// ==========================================
-
-async function generateFinancialReport() {
-
-    const reportBox =
-        document.getElementById(
-            "financialReport"
-        );
-
-    if (!reportBox) return;
-
-    const invoicesSnap =
-        await db.ref(
-            "invoices"
-        ).once("value");
-
-    const invoices =
-        invoicesSnap.val() || {};
-
-    let revenue = 0;
-    let cost = 0;
-
-    for (const month in invoices) {
-
-        for (const phone in invoices[month]) {
-
-            const inv =
-                invoices[month][phone];
-
-            revenue +=
-                Number(
-                    inv.paidAmount || 0
-                );
-
-            cost +=
-                Number(
-                    inv.totalAfterTaxes || 0
-                );
-        }
-    }
-
-    const net =
-        revenue - cost;
-
-    reportBox.innerHTML = `
-        <div class="report-card">
-            <h3>إجمالي التحصيل</h3>
-            <h2>${revenue.toFixed(2)} ج.م</h2>
-        </div>
-
-        <div class="report-card">
-            <h3>إجمالي فواتير فودافون</h3>
-            <h2>${cost.toFixed(2)} ج.م</h2>
-        </div>
-
-        <div class="report-card">
-            <h3>صافي الربح</h3>
-            <h2>${net.toFixed(2)} ج.م</h2>
-        </div>
-    `;
-}
-
-// ==========================================
-// Backup
-// ==========================================
-
-async function exportBackup() {
-
-    const customers =
-        (
-            await db.ref(
-                "customers"
-            ).once("value")
-        ).val() || {};
-
-    const invoices =
-        (
-            await db.ref(
-                "invoices"
-            ).once("value")
-        ).val() || {};
-
-    const wallet =
-        (
-            await db.ref(
-                "wallet"
-            ).once("value")
-        ).val() || {};
-
-    const history =
-        (
-            await db.ref(
-                "paymentHistory"
-            ).once("value")
-        ).val() || {};
-
-    const backup = {
-
-        customers,
-        invoices,
-        wallet,
-        history,
-
-        exportDate:
-            new Date()
-            .toISOString()
-    };
-
-    const blob =
-        new Blob(
-            [
-                JSON.stringify(
-                    backup,
-                    null,
-                    2
-                )
-            ],
-            {
-                type:
-                    "application/json"
-            }
-        );
-
-    const url =
-        URL.createObjectURL(blob);
-
-    const a =
-        document.createElement("a");
-
-    a.href = url;
-
-    a.download =
-        `backup-${Date.now()}.json`;
-
-    a.click();
-
-    URL.revokeObjectURL(url);
-}
-
-// ==========================================
-// Restore
-// ==========================================
-
-function restoreBackup(event) {
-
-    const file =
-        event.target.files[0];
-
-    if (!file) return;
-
-    const reader =
-        new FileReader();
-
-    reader.onload =
-        async function(e) {
-
-        try {
-
-            const data =
-                JSON.parse(
-                    e.target.result
-                );
-
-            if (
-                !confirm(
-                    "سيتم استبدال البيانات الحالية بالكامل"
-                )
-            ) {
-                return;
-            }
-
-            await db.ref().set(data);
-
-            alert(
-                "تم استعادة النسخة الاحتياطية"
-            );
-
-            location.reload();
-
-        } catch {
-
-            alert(
-                "ملف النسخة غير صالح"
-            );
-        }
-    };
-
-    reader.readAsText(file);
-}
-
-// ==========================================
-// Dark Mode
-// ==========================================
-
-function toggleDarkMode() {
-
-    document.body.classList.toggle(
-        "dark-mode"
-    );
-
-    const enabled =
-        document.body.classList.contains(
-            "dark-mode"
-        );
-
-    localStorage.setItem(
-        "darkMode",
-        enabled
-    );
-}
-
-function loadDarkMode() {
-
-    const enabled =
-        localStorage.getItem(
-            "darkMode"
-        );
-
-    if (enabled === "true") {
-
-        document.body.classList.add(
-            "dark-mode"
-        );
-    }
-}
-
-// ==========================================
-// Export Excel
-// ==========================================
-
-async function exportCustomersExcel() {
-
-    const snap =
-        await db.ref(
-            "customers"
-        ).once("value");
-
-    const customers =
-        snap.val() || {};
-
-    const rows = [];
-
-    for (const phone in customers) {
-
-        rows.push({
-
-            الاسم:
-                customers[phone].name,
-
-            الرقم:
-                phone,
-
-            سعر_الباقة:
-                customers[phone].price,
-
-            الخطة:
-                customers[phone]
-                    .ratePlan
-        });
-    }
-
-    const ws =
-        XLSX.utils.json_to_sheet(
-            rows
-        );
-
-    const wb =
-        XLSX.utils.book_new();
-
-    XLSX.utils.book_append_sheet(
-        wb,
-        ws,
-        "Customers"
-    );
-
-    XLSX.writeFile(
-        wb,
-        "customers.xlsx"
-    );
-}
-
-// ==========================================
-// Export Payment History Excel
-// ==========================================
-
-async function exportHistoryExcel() {
-
-    const snap =
-        await db.ref(
-            "paymentHistory"
-        ).once("value");
-
-    const history =
-        snap.val() || {};
-
-    const rows = [];
-
-    Object.values(history)
-        .forEach(item => {
-
-            rows.push({
-
-                رقم:
-                    item.phone,
-
-                شهر:
-                    item.month,
-
-                مبلغ:
-                    item.amount,
-
-                نوع:
-                    item.type,
-
-                تاريخ:
-                    item.createdAt
-            });
-        });
-
-    const ws =
-        XLSX.utils.json_to_sheet(
-            rows
-        );
-
-    const wb =
-        XLSX.utils.book_new();
-
-    XLSX.utils.book_append_sheet(
-        wb,
-        ws,
-        "History"
-    );
-
-    XLSX.writeFile(
-        wb,
-        "payment-history.xlsx"
-    );
-}
-
-// ==========================================
-// إعدادات التشغيل
-// ==========================================
-
-document.addEventListener(
-    "DOMContentLoaded",
-    () => {
-
-        loadDarkMode();
-
-        loadDashboard();
-
-        generateFinancialReport();
-
-        loadPaymentHistory();
-    }
-);
-// ==========================================
-// [5] البحث الشامل المتقدم
-// ==========================================
-
-async function globalSearch() {
-
-    const keyword =
-        document.getElementById("globalSearch")
-        ?.value.trim()
-        .toLowerCase();
-
-    const container =
-        document.getElementById("searchResults");
-
-    if (!container) return;
-
-    if (!keyword) {
-
-        container.innerHTML = `
-            <div class="empty-state">
-                اكتب رقم أو اسم للبحث
-            </div>
-        `;
-        return;
-    }
-
-    const customers =
-        (
-            await db.ref("customers")
-            .once("value")
-        ).val() || {};
-
-    container.innerHTML = "";
-
-    let found = false;
-
-    for (const phone in customers) {
-
-        const c = customers[phone];
-
-        if (
-            phone.includes(keyword) ||
-            c.name.toLowerCase().includes(keyword)
-        ) {
-
-            found = true;
-
-            container.innerHTML += `
-                <div class="customer-card">
-
-                    <h3>${c.name}</h3>
-
-                    <p>${phone}</p>
-
-                    <p>
-                        الباقة:
-                        ${c.price || 0}
-                        ج.م
-                    </p>
-
-                    <button
-                        class="btn btn-primary"
-                        onclick="showAccountStatement('${phone}')"
-                    >
-                        كشف الحساب
-                    </button>
-
-                </div>
-            `;
-        }
-    }
-
-    if (!found) {
-
-        container.innerHTML = `
-            <div class="empty-state">
-                لا توجد نتائج
-            </div>
-        `;
-    }
-}
-
-// ==========================================
-// كشف الحساب
-// ==========================================
-
-async function showAccountStatement(phone) {
-
-    const modal =
-        document.getElementById(
-            "statementModal"
-        );
-
-    const body =
-        document.getElementById(
-            "statementBody"
-        );
-
-    if (!modal || !body) return;
-
-    const customer =
-        (
-            await db.ref(
-                `customers/${phone}`
-            ).once("value")
-        ).val();
-
-    const invoices =
-        (
-            await db.ref(
-                "invoices"
-            ).once("value")
-        ).val() || {};
-
-    let rows = "";
-
-    let totalDebt = 0;
-    let totalPaid = 0;
-
-    for (const month in invoices) {
-
-        if (!invoices[month][phone])
-            continue;
-
-        const inv =
-            invoices[month][phone];
-
-        const packagePrice =
-            Number(
-                inv.packagePrice || 0
-            );
-
-        const paid =
-            Number(
-                inv.paidAmount || 0
-            );
-
-        const remain =
-            packagePrice - paid;
-
-        totalPaid += paid;
-        totalDebt += remain;
-
-        rows += `
-            <tr>
-                <td>${month}</td>
-                <td>${packagePrice}</td>
-                <td>${paid}</td>
-                <td>${remain}</td>
-                <td>${inv.status}</td>
-            </tr>
-        `;
-    }
-
-    body.innerHTML = `
-        <div class="statement-header">
-
-            <h2>
-                ${customer.name}
-            </h2>
-
-            <p>${phone}</p>
-
-            <div class="summary">
-
-                <span>
-                    المدفوع:
-                    ${totalPaid}
-                </span>
-
-                <span>
-                    المتبقي:
-                    ${totalDebt}
-                </span>
-
-            </div>
-
-        </div>
-
-        <table class="table">
-
-            <thead>
-
-                <tr>
-                    <th>الشهر</th>
-                    <th>الباقة</th>
-                    <th>المدفوع</th>
-                    <th>المتبقي</th>
-                    <th>الحالة</th>
-                </tr>
-
-            </thead>
-
-            <tbody>
-                ${rows}
-            </tbody>
-
-        </table>
-    `;
-
-    modal.style.display = "flex";
-}
-
-// ==========================================
-// إغلاق كشف الحساب
-// ==========================================
-
-function closeStatement() {
-
-    document.getElementById(
-        "statementModal"
-    ).style.display = "none";
-}
-
-// ==========================================
-// تعديل سعر فاتورة تاريخية
-// ==========================================
-
-async function updateHistoricalPrice(
-    month,
-    phone,
-    newPrice
-) {
-
-    newPrice =
-        Number(newPrice);
-
-    if (
-        !newPrice ||
-        newPrice <= 0
-    ) {
-
-        showToast(
-            "سعر غير صحيح",
-            "error"
-        );
-
-        return;
-    }
-
-    await db.ref(
-        `invoices/${month}/${phone}`
-    ).update({
-
-        packagePrice:
-            newPrice
-
-    });
-
-    showToast(
-        "تم تعديل السعر",
-        "success"
-    );
-
-    loadCollectionMonth();
-    loadDashboard();
-}
-
-// ==========================================
-// حذف شهر كامل
-// ==========================================
-
-async function deleteInvoiceMonth() {
-
-    const month =
-        document.getElementById(
-            "deleteMonth"
-        ).value;
-
-    if (!month)
-        return;
-
-    if (
-        !confirm(
-            `حذف شهر ${month} ؟`
-        )
-    ) return;
-
-    await db.ref(
-        `invoices/${month}`
-    ).remove();
-
-    showToast(
-        "تم حذف الشهر",
-        "success"
-    );
-
-    loadDashboard();
-}
-
-// ==========================================
-// حذف فاتورة عميل
-// ==========================================
-
-async function deleteInvoice(
-    month,
-    phone
-) {
-
-    if (
-        !confirm(
-            "تأكيد الحذف؟"
-        )
-    ) return;
-
-    await db.ref(
-        `invoices/${month}/${phone}`
-    ).remove();
-
-    showToast(
-        "تم الحذف",
-        "success"
-    );
-
-    loadCollectionMonth();
-}
-
-// ==========================================
-// فلترة الشهور
-// ==========================================
-
-async function loadMonthsLists() {
-
-    const invoices =
-        (
-            await db.ref(
-                "invoices"
-            ).once("value")
-        ).val() || {};
-
-    const selects =
-        document.querySelectorAll(
-            ".month-select"
-        );
-
-    selects.forEach(select => {
-
-        select.innerHTML =
-            `<option value="">
-                اختر شهر
-            </option>`;
-
-        Object.keys(invoices)
-            .sort()
-            .reverse()
-            .forEach(month => {
-
-                select.innerHTML += `
-                    <option value="${month}">
-                        ${month}
-                    </option>
-                `;
-            });
-    });
-}
-
-// ==========================================
-// Toast Notifications
-// ==========================================
-
-function showToast(
-    message,
-    type = "success"
-) {
-
-    const toast =
-        document.createElement("div");
-
-    toast.className =
-        `toast ${type}`;
-
-    toast.innerText =
-        message;
-
-    document.body.appendChild(
-        toast
-    );
-
-    setTimeout(() => {
-
-        toast.classList.add(
-            "show"
-        );
-
-    }, 50);
-
-    setTimeout(() => {
-
-        toast.classList.remove(
-            "show"
-        );
-
-        setTimeout(() => {
-
-            toast.remove();
-
-        }, 300);
-
-    }, 3000);
-}
-
-// ==========================================
-// تحسين الأداء
-// ==========================================
-
-const cache = {};
-
-async function getCachedData(path) {
-
-    if (cache[path]) {
-        return cache[path];
-    }
-
-    const snap =
-        await db.ref(path)
-        .once("value");
-
-    const data =
-        snap.val();
-
-    cache[path] = data;
-
-    return data;
-}
-
-function clearCache() {
-
-    Object.keys(cache)
-    .forEach(key => {
-
-        delete cache[key];
-
-    });
-}
-
-// ==========================================
-// مراقبة الاتصال
-// ==========================================
-
-function monitorConnection() {
-
-    const connectedRef =
-        firebase.database()
-        .ref(".info/connected");
-
-    connectedRef.on(
-        "value",
-        snap => {
-
-            if (
-                snap.val() === true
-            ) {
-
-                showToast(
-                    "تم الاتصال بالخادم",
-                    "success"
-                );
-
-            } else {
-
-                showToast(
-                    "انقطاع الاتصال",
-                    "error"
-                );
-            }
-        }
-    );
-}
-
-// ==========================================
-// تحديث تلقائي Dashboard
-// ==========================================
-
-function enableLiveDashboard() {
-
-    db.ref("invoices")
-    .on("value", () => {
-
-        loadDashboard();
-
-    });
-
-    db.ref("paymentHistory")
-    .on("value", () => {
-
-        loadRecentPayments();
-
-    });
-}
-
-// ==========================================
-// تشغيل النظام
-// ==========================================
-
-document.addEventListener(
-    "DOMContentLoaded",
-    () => {
-
-        loadMonthsLists();
-
-        monitorConnection();
-
-        enableLiveDashboard();
-
-    }
-);
-
-// ==========================================
-// Version
-// ==========================================
-
-const APP_VERSION =
-    "Vodafone Billing Pro v1.0.0";
-
-console.log(APP_VERSION);
-
+            tbody.i
