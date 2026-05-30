@@ -460,18 +460,20 @@ function previewInvoiceFile(input) {
         const tbody = document.querySelector("#invoice-preview-table tbody");
         if (tbody) tbody.innerHTML = "";
 
+        // ترتيب أعمدة الملف: A=الرقم | B=الاسم | C=سعر الباقة | D=الخطة
         rows.slice(1).forEach(row => {
 
             if (!row[0]) return;
 
             const phone = formatPhone(String(row[0]));
-            const plan  = row[1] || "";
+            const name  = row[1] ? String(row[1]).trim() : "";
             const price = parseFloat(row[2]) || 0;
+            const plan  = row[3] ? String(row[3]).trim() : "";
 
-            parsedInvoiceData.push({ phone, plan, price });
+            parsedInvoiceData.push({ phone, name, price, plan });
 
             const client  = allClients[phone];
-            const matched = client ? "متطابق" : "غير موجود";
+            const matched = client ? "متطابق ✅" : "غير موجود ❌";
 
             if (tbody) {
                 tbody.innerHTML += `
@@ -505,7 +507,8 @@ function saveProcessedInvoice() {
     parsedInvoiceData.forEach(item => {
         updates[`invoices/${month}/${item.phone}`] = {
             phone:        item.phone,
-            plan:         item.plan,
+            name:         item.name  || "",
+            plan:         item.plan  || "",
             packagePrice: item.price,
             paidAmount:   0,
             status:       "غير مدفوع"
@@ -537,14 +540,15 @@ function importClientsFromExcel(input) {
 
         const updates = {};
 
+        // ترتيب أعمدة الملف: A=الرقم | B=الاسم | C=سعر الباقة | D=الخطة
         rows.slice(1).forEach(row => {
             if (!row[0]) return;
             const phone = formatPhone(String(row[0]));
             updates["settings/" + phone] = {
-                name:  row[1] || "",
+                name:  row[1] ? String(row[1]).trim() : "",
                 phone: phone,
                 price: parseFloat(row[2]) || 0,
-                plan:  row[3] || ""
+                plan:  row[3] ? String(row[3]).trim() : ""
             };
         });
 
@@ -739,4 +743,236 @@ async function loadPaymentHistory() {
         Object.keys(data).reverse().forEach(key => {
 
             const row = data[key];
-            tbody.i
+            tbody.innerHTML += `
+                <tr>
+                    <td>${new Date(row.createdAt).toLocaleString("ar-EG")}</td>
+                    <td>${row.month}</td>
+                    <td>${row.phone}</td>
+                    <td>${row.amount}</td>
+                </tr>
+            `;
+
+        });
+
+    } catch (err) {
+        alert("خطأ في تحميل السجل: " + err.message);
+    }
+
+}
+
+// ==========================================
+// Wallet — Search
+// ==========================================
+
+function searchForAdvance() {
+
+    const keyword = document.getElementById("advance-search-input").value.trim().toLowerCase();
+    if (!keyword) { alert("أدخل رقم أو اسم"); return; }
+
+    let foundPhone = null;
+
+    Object.keys(allClients).forEach(phone => {
+        const client = allClients[phone];
+        if (
+            phone.includes(keyword) ||
+            (client.name && client.name.toLowerCase().includes(keyword))
+        ) {
+            foundPhone = phone;
+        }
+    });
+
+    if (!foundPhone) { alert("لم يتم العثور على عميل"); return; }
+
+    const client  = allClients[foundPhone];
+    const balance = Number(allWallets[foundPhone]?.balance || 0);
+
+    document.getElementById("advance-user-name").innerText    = client.name  || "";
+    document.getElementById("advance-user-phone").innerText   = foundPhone;
+    document.getElementById("current-advance-balance").innerText = balance.toFixed(2);
+
+    document.getElementById("advance-profile-card").style.display = "block";
+    document.getElementById("advance-profile-card").dataset.phone  = foundPhone;
+
+}
+
+// ==========================================
+// Wallet — Save Advance Payment
+// ==========================================
+
+async function saveAdvancePayment() {
+
+    const card   = document.getElementById("advance-profile-card");
+    const phone  = card?.dataset.phone;
+    const amount = parseFloat(document.getElementById("new-advance-amount").value) || 0;
+
+    if (!phone) { alert("ابحث عن عميل أولاً"); return; }
+    if (amount <= 0) { alert("أدخل مبلغ صحيح"); return; }
+
+    try {
+
+        const oldBalance = Number(allWallets[phone]?.balance || 0);
+        const newBalance = oldBalance + amount;
+
+        await db.ref(`wallets/${phone}`).set({ balance: newBalance });
+
+        document.getElementById("current-advance-balance").innerText = newBalance.toFixed(2);
+        document.getElementById("new-advance-amount").value = "";
+
+        await savePaymentHistory(phone, "محفظة", amount, "إيداع محفظة");
+
+        alert("تم الإيداع بنجاح");
+
+    } catch (err) {
+        alert("خطأ: " + err.message);
+    }
+
+}
+
+// ==========================================
+// Global Search — Account Statement
+// ==========================================
+
+function executeGlobalSearch() {
+
+    const keyword = document.getElementById("global-search-input").value.trim().toLowerCase();
+    if (!keyword) { alert("أدخل اسم أو رقم"); return; }
+
+    const summaryArea  = document.getElementById("search-summary-area");
+    const resultsArea  = document.getElementById("search-results-area");
+
+    summaryArea.innerHTML = "";
+    resultsArea.innerHTML = "";
+
+    let foundPhone = null;
+
+    Object.keys(allClients).forEach(phone => {
+        const client = allClients[phone];
+        if (
+            phone.includes(keyword) ||
+            (client.name && client.name.toLowerCase().includes(keyword))
+        ) {
+            foundPhone = phone;
+        }
+    });
+
+    if (!foundPhone) {
+        summaryArea.innerHTML = `<div class="card">لم يتم العثور على عميل</div>`;
+        return;
+    }
+
+    const client  = allClients[foundPhone];
+    const wallet  = Number(allWallets[foundPhone]?.balance || 0);
+
+    summaryArea.innerHTML = `
+        <div class="card">
+            <h3>${client.name || foundPhone}</h3>
+            <p>الرقم: ${foundPhone}</p>
+            <p>الباقة: ${client.plan || "-"} | السعر: ${client.price || 0}</p>
+            <p>رصيد المحفظة: <strong>${wallet.toFixed(2)}</strong></p>
+        </div>
+    `;
+
+    // فواتير العميل
+    let hasInvoices = false;
+
+    Object.keys(allInvoices).sort().forEach(month => {
+
+        const inv = allInvoices[month][foundPhone];
+        if (!inv) return;
+
+        hasInvoices = true;
+
+        const pkg    = Number(inv.packagePrice || 0);
+        const paid   = Number(inv.paidAmount   || 0);
+        const remain = pkg - paid;
+        const badgeClass = remain <= 0 ? "badge-green" : "badge-red";
+
+        resultsArea.innerHTML += `
+            <div class="card">
+                <strong>${month}</strong>
+                <span class="badge ${badgeClass}" style="float:inline-start">
+                    ${remain <= 0 ? "مسدد" : "مديون"}
+                </span>
+                <p>الفاتورة: ${pkg} | المدفوع: ${paid} | المتبقي: ${remain}</p>
+            </div>
+        `;
+
+    });
+
+    if (!hasInvoices) {
+        resultsArea.innerHTML = `<div class="card">لا توجد فواتير مسجلة</div>`;
+    }
+
+}
+
+// ==========================================
+// Backup — Export
+// ==========================================
+
+async function exportBackup() {
+
+    try {
+
+        const snap = await db.ref("/").once("value");
+        const data = snap.val() || {};
+
+        const blob = new Blob(
+            [JSON.stringify(data, null, 2)],
+            { type: "application/json" }
+        );
+
+        const a    = document.createElement("a");
+        a.href     = URL.createObjectURL(blob);
+        a.download = `backup_${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+
+    } catch (err) {
+        alert("خطأ في التصدير: " + err.message);
+    }
+
+}
+
+// ==========================================
+// Backup — Import / Restore
+// ==========================================
+
+function importBackup() {
+
+    const input = document.getElementById("restore-file");
+    const file  = input?.files[0];
+    if (!file) { alert("اختر ملف النسخ الاحتياطي"); return; }
+
+    const reader = new FileReader();
+
+    reader.onload = async function (e) {
+
+        try {
+
+            const data = JSON.parse(e.target.result);
+
+            if (!confirm("سيتم استبدال جميع البيانات. هل أنت متأكد؟")) return;
+
+            await db.ref("/").set(data);
+
+            alert("تم الاستعادة بنجاح");
+
+        } catch (err) {
+            alert("خطأ في الاستعادة: " + err.message);
+        }
+
+    };
+
+    reader.readAsText(file);
+
+}
+
+// ==========================================
+// Helper — Set Text
+// ==========================================
+
+function setText(id, value) {
+
+    const el = document.getElementById(id);
+    if (el) el.innerText = value;
+
+}
