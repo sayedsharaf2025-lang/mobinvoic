@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Vodafone Invoice Manager Pro</title>
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<!-- CSS -->
+<link rel="stylesheet" href="styles.css">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<!-- XLSX -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<!-- ChartJS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+<!-- ========================= -->
+<!-- Sidebar -->
+<!-- ========================= -->
+
+<div class="sidebar">
+
+<div class="logo">
+<i class="fa-solid fa-sim-card"></i>
+<span>Vodafone Pro</span>
+</div>
+
+<ul class="nav-links">
+
+<li class="active" data-target="dashboard-screen">
+<i class="fa-solid fa-chart-line"></i>
+<span>لوحة التحكم</span>
+</li>
+
+<li data-target="settings-screen">
+<i class="fa-solid fa-users"></i>
+<span>العملاء</span>
+</li>
+
+<li data-target="invoice-screen">
+<i class="fa-solid fa-file-invoice"></i>
+<span>استيراد الفواتير</span>
+</li>
+
+<li data-target="collection-screen">
+<i class="fa-solid fa-money-bill-wave"></i>
+<span>التحصيل</span>
+</li>
+
+<li data-target="wallet-screen">
+<i class="fa-solid fa-wallet"></i>
+<span>المحفظة</span>
+</li>
+
+<li data-target="search-screen">
+<i class="fa-solid fa-magnifying-glass"></i>
+<span>كشف الحساب</span>
+</li>
+
+<li data-target="history-screen">
+<i class="fa-solid fa-clock-rotate-left"></i>
+<span>سجل المدفوعات</span>
+</li>
+
+<li data-target="backup-screen">
+<i class="fa-solid fa-database"></i>
+<span>النسخ الاحتياطي</span>
+</li>
+
+</ul>
+
+<div class="sidebar-footer">
+<button id="dark-mode-btn" class="btn">
+<i class="fa-solid fa-moon"></i>
+الوضع الليلي
+</button>
+</div>
+
+</div>
+
+<!-- ========================= -->
+<!-- Main -->
+<!-- ========================= -->
+
+<div class="main-content">
+
+<!-- ========================= -->
+<!-- Dashboard -->
+<!-- ========================= -->
+
+<section id="dashboard-screen" class="app-screen active-screen">
+
+<div class="page-header">
+<h2>لوحة التحكم</h2>
+</div>
+
+<div class="dashboard-cards">
+
+<div class="stat-card">
+<h3>العملاء</h3>
+<strong id="total-clients">0</strong>
+</div>
+
+<div class="stat-card">
+<h3>الخطوط</h3>
+<strong id="total-lines">0</strong>
+</div>
+
+<div class="stat-card">
+<h3>الفواتير</h3>
+<strong id="total-invoices">0</strong>
+</div>
+
+<div class="stat-card">
+<h3>المدفوعات</h3>
+<strong id="total-payments">0</strong>
+</div>
+
+<div class="stat-card">
+<h3>المديونيات</h3>
+<strong id="total-debts">0</strong>
+</div>
+
+<div class="stat-card">
+<h3>صافي الربح</h3>
+<strong id="net-profit">0</strong>
+</div>
+
+</div>
+
+<div class="card">
+<canvas id="profitChart"></canvas>
+</div>
+
+</section>
+
+<!-- ========================= -->
+<!-- Settings -->
+<!-- ========================= -->
+
+<section id="settings-screen" class="app-screen">
+
+<div class="page-header">
+<h2>إدارة العملاء</h2>
+</div>
+
+<div class="card">
+
+<h3>إضافة عميل</h3>
+
+<div class="form-grid">
+
+<input type="text"
+id="new-user-name"
+placeholder="اسم العميل">
+
+<input type="text"
+id="new-user-phone"
+placeholder="رقم الهاتف">
+
+<input type="number"
+id="new-user-price"
+placeholder="سعر الباقة">
+
+<input type="text"
+id="new-user-plan"
+placeholder="الخطة">
+
+</div>
+
+<button class="btn btn-green"
+onclick="addNewUser()">
+إضافة
+</button>
+
+</div>
+
+<div class="card">
+
+<input type="text"
+id="settings-table-search"
+placeholder="بحث">
+
+<input type="file"
+id="settings-file-input"
+accept=".xlsx,.xls">
+
+<table id="settings-main-table">
+
+<thead>
+<tr>
+<th>الاسم</th>
+<th>الرقم</th>
+<th>الباقة</th>
+<th>الخطة</th>
+<th>إجراءات</th>
+</tr>
+</thead>
+
+<tbody id="settings-table-body">
+</tbody>
+
+</table>
+
+</div>
+
+</section>
+
+<!-- ========================= -->
+<!-- Invoice Import -->
+<!-- ========================= -->
+
+<section id="invoice-screen" class="app-screen">
+
+<div class="page-header">
+<h2>استيراد الفواتير</h2>
+</div>
+
+<div class="card">
+
+<select id="invoice-month-select">
+<option value="">اختر الشهر</option>
+</select>
+
+<input type="file"
+id="invoice-file-input"
+accept=".xlsx,.xls">
+
+<button class="btn btn-green"
+onclick="saveProcessedInvoice()">
+حفظ الفاتورة
+</button>
+
+</div>
+
+<div id="invoice-preview-card"
+class="card">
+
+<table id="invoice-preview-table">
+
+<thead>
+<tr>
+<th>الرقم</th>
+<th>الخطة</th>
+<th>الفاتورة</th>
+<th>الحالة</th>
+</tr>
+</thead>
+
+<tbody></tbody>
+
+</table>
+
+</div>
+
+</section>
+
+<!-- ========================= -->
+<!-- Collection -->
+<!-- ========================= -->
+
+<section id="collection-screen"
+class="app-screen">
+
+<div class="page-header">
+<h2>التحصيل</h2>
+</div>
+
+<div class="card">
+
+<select id="collection-month-select">
+<option value="">اختر الشهر</option>
+</select>
+
+<button class="btn btn-green"
+onclick="payAllActiveInvoices()">
+تحصيل الكل
+</button>
+
+</div>
+
+<div class="card">
+
+<table>
+
+<thead>
+<tr>
+<th>الرقم</th>
+<th>الاسم</th>
+<th>الباقة</th>
+<th>الفاتورة</th>
+<th>المدفوع</th>
+<th>الحالة</th>
+<th>إجراءات</th>
+</tr>
+</thead>
+
+<tbody id="collection-table-body"></tbody>
+
+</table>
+
+</div>
+
+</section>
+
+<!-- ========================= -->
+<!-- Wallet -->
+<!-- ========================= -->
+
+<section id="wallet-screen"
+class="app-screen">
+
+<div class="page-header">
+<h2>المحفظة الذكية</h2>
+</div>
+
+<div class="card">
+
+<input type="text"
+id="advance-search-input"
+placeholder="رقم الهاتف أو الاسم">
+
+<button class="btn"
+onclick="searchForAdvance()">
+بحث
+</button>
+
+</div>
+
+<div id="advance-profile-card"
+class="card"
+style="display:none">
+
+<h3 id="advance-user-name"></h3>
+
+<p id="advance-user-phone"></p>
+
+<p>
+الرصيد الحالي:
+<strong id="current-advance-balance">
+0
+</strong>
+</p>
+
+<input type="number"
+id="new-advance-amount"
+placeholder="المبلغ">
+
+<button class="btn btn-green"
+onclick="saveAdvancePayment()">
+إيداع
+</button>
+
+</div>
+
+</section>
+
+<!-- ========================= -->
+<!-- Search -->
+<!-- ========================= -->
+
+<section id="search-screen"
+class="app-screen">
+
+<div class="page-header">
+<h2>كشف الحساب</h2>
+</div>
+
+<div class="card">
+
+<input type="text"
+id="global-search-input"
+placeholder="اسم أو رقم">
+
+<button class="btn"
+onclick="executeGlobalSearch()">
+بحث
+</button>
+
+</div>
+
+<div id="search-summary-area"></div>
+
+<div id="search-results-area"></div>
+
+</section>
+
+<!-- ========================= -->
+<!-- Payment History -->
+<!-- ========================= -->
+
+<section id="history-screen"
+class="app-screen">
+
+<div class="page-header">
+<h2>سجل المدفوعات</h2>
+</div>
+
+<div class="card">
+
+<table>
+
+<thead>
+<tr>
+<th>التاريخ</th>
+<th>الشهر</th>
+<th>الرقم</th>
+<th>المبلغ</th>
+</tr>
+</thead>
+
+<tbody id="payment-history-body">
+</tbody>
+
+</table>
+
+</div>
+
+</section>
+
+<!-- ========================= -->
+<!-- Backup -->
+<!-- ========================= -->
+
+<section id="backup-screen"
+class="app-screen">
+
+<div class="page-header">
+<h2>النسخ الاحتياطي</h2>
+</div>
+
+<div class="card">
+
+<button class="btn btn-green"
+onclick="exportBackup()">
+Export Backup
+</button>
+
+<input type="file"
+id="restore-file">
+
+<button class="btn"
+onclick="importBackup()">
+Restore Backup
+</button>
+
+</div>
+
+</section>
+
+</div>
+
+<!-- ========================= -->
+<!-- Edit Modal -->
+<!-- ========================= -->
+
+<div id="edit-modal"
+class="modal">
+
+<div class="modal-content">
+
+<h3>تعديل بيانات العميل</h3>
+
+<input type="text" id="edit-name">
+<input type="text" id="edit-phone" readonly>
+<input type="number" id="edit-price">
+<input type="text" id="edit-plan">
+
+<div class="modal-actions">
+
+<button class="btn btn-green"
+onclick="saveClientEdits()">
+حفظ
+</button>
+
+<button class="btn btn-red"
+onclick="closeEditModal()">
+إغلاق
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- JS -->
+<script src="app.js"></script>
+
+</body>
+</html>
