@@ -2,329 +2,540 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>منظومة إدارة فواتير فودافون</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>نظام فودافون المتكامل - الفواتير والتحصيل والمحافظ</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-
-    <div class="sidebar">
-        <div class="logo">
-            <i class="fa-solid fa-droplet"></i>
-            <span>Vodafone Billing</span>
-        </div>
-        <ul class="nav-links">
-            <li class="active" data-target="search-screen"><i class="fa-solid fa-magnifying-glass"></i> الشاشة الرئيسية للبحث</li>
-            <li data-target="invoices-screen"><i class="fa-solid fa-file-invoice-dollar"></i> إدارة الفواتير والمعالجة</li>
-            <li data-target="collection-screen"><i class="fa-solid fa-money-bill-wave"></i> شاشة التحصيل</li>
-            <li data-target="advance-screen"><i class="fa-solid fa-wallet"></i> الدفع المقدم</li>
-            <li data-target="settings-screen"><i class="fa-solid fa-gear"></i> دليل الأفراد والإعدادات</li>
-        </ul>
-    </div>
-
-    <div class="main-content">
-        
-        <div id="search-screen" class="app-screen active-screen">
-            <div class="header">
-                <h2>الشاشة الرئيسية للبحث والاستعلام الشامل</h2>
-                <p>ابحث عن مشترك، استعرض التقارير المالية، أو أضف التسويات الشهرية الملحقة</p>
-            </div>
-
-            <div class="grid-3">
-                <div class="card" style="grid-column: span 2;">
-                    <h3>البحث السريع في قاعدة البيانات التراكمية</h3>
-                    <div class="search-box">
-                        <input type="text" id="global-search-input" placeholder="أدخل رقم الهاتف أو اسم المشترك للبحث الفوري...">
-                        <select id="search-month-select" class="form-control" style="width: 200px;">
-                            <option value="all">كل الأشهر المتاحة</option>
-                        </select>
-                        <button class="btn btn-red" onclick="executeGlobalSearch()"><i class="fa-solid fa-magnifying-glass"></i> استعلام</button>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h3>تسويات مالية إضافية للشهر</h3>
-                    <div class="form-group"><label>فاتورة الإكسيل اليدوية</label><input type="number" id="manual-invoice-input" class="form-control" placeholder="0.00"></div>
-                    <div class="grid-2" style="gap:10px;">
-                        <div class="form-group"><label>إيرادات أخرى</label><input type="number" id="additional-revenue-input" class="form-control" placeholder="0.00"></div>
-                        <div class="form-group"><label>مصروفات أخرى</label><input type="number" id="additional-expenses-input" class="form-control" placeholder="0.00"></div>
-                    </div>
-                    <button class="btn btn-outline" style="width:100%;" onclick="saveExtraFinancials()"><i class="fa-solid fa-floppy-disk"></i> حفظ التسوية الإضافية</button>
-                </div>
-            </div>
-
-            <div id="search-results-area" style="margin-top:20px;"></div>
-
-            <div class="card" style="margin-top: 20px;">
-                <h3>التقرير المالي العام والأرباح التراكمية للمنظومة</h3>
-                <div class="grid-4" id="financial-report-results" style="margin-top:15px; gap:15px;"></div>
-            </div>
-        </div>
-
-        <div id="invoices-screen" class="app-screen">
-            <div class="header">
-                <h2>إدارة وتوليد فواتير فودافون الشهرية</h2>
-                <p>ولد الحسابات تلقائياً بناءً على دليل الباقات أو ارفع ملفات إكسيل فودافون لمطابقة التكلفة</p>
-            </div>
-
-            <div class="grid-3">
-                <div class="card">
-                    <h3><i class="fa-solid fa-wand-magic-sparkles" style="color: #2563eb;"></i> 1. توليد كشوفات تلقائية</h3>
-                    <p style="font-size:13px; color:#666; margin-bottom:15px;">اختر الشهر المالي لإنشاء مطالبات مالية فورية وتلقائية لجميع المشتركين المسجلين بدليل الأفراد بناءً على أسعار باقاتهم الحالية.</p>
-                    <div class="form-group">
-                        <label>الشهر المالي المستهدف</label>
-                        <input type="month" id="invoice-month-select" class="form-control">
-                    </div>
-                    <button class="btn btn-outline" style="width:100%; color:#2563eb; border-color:#2563eb; margin-top:20px;" onclick="generateMonthlyInvoicesFromSettings()"><i class="fa-solid fa-gears"></i> توليد مطالبات الشهر الآن</button>
-                </div>
-
-                <div class="card">
-                    <h3><i class="fa-solid fa-file-excel" style="color:#107c41;"></i> 2. دمج ورفع إكسيل فودافون</h3>
-                    <p style="font-size:13px; color:#666; margin-bottom:15px;">ارفع ملف الفاتورة الفعلي لربط الأرقام وتحديث خانة التكلفة الحقيقية (بعد الضريبة) تلقائياً داخل كشوفات الشهر المسجلة.</p>
-                    <div class="form-group">
-                        <label>اختر ملف الـ Excel</label>
-                        <input type="file" id="invoice-excel-file" class="form-control" accept=".xlsx, .xls" onchange="handleInvoiceImport(event)">
-                    </div>
-                    <button class="btn btn-red" style="width:100%; margin-top:10px;" onclick="saveProcessedInvoice()"><i class="fa-solid fa-cloud-arrow-up"></i> اعتماد ودمج الفاتورة الفعّالة</button>
-                </div>
-
-                <div class="card">
-                    <h3><i class="fa-solid fa-trash-can" style="color:var(--primary-color);"></i> إزالة شهر مالي</h3>
-                    <p style="font-size:13px; color:#666; margin-bottom:15px;">في حال رغبتك في إعادة تصفير وإلغاء قيود وفواتير أي شهر مسجل، اختر الشهر واضغط مسح نهائي.</p>
-                    <div class="form-group">
-                        <label>اختر الشهر المالي</label>
-                        <select id="delete-invoice-month-select" class="form-control"></select>
-                    </div>
-                    <button class="btn btn-outline" style="width:100%; color:var(--primary-color); border-color:var(--primary-color); margin-top:20px;" onclick="deleteStoredInvoice()"><i class="fa-solid fa-triangle-exclamation"></i> حذف قيود الشهر نهائياً</button>
-                </div>
-            </div>
-
-            <div class="card" id="invoice-preview-card" style="margin-top: 20px; display: none;">
-                <h3>معاينة وتحليل بيانات ملف إكسيل فودافون المرفوع</h3>
-                <div style="max-height: 300px; overflow-y: auto; margin-top: 15px;">
-                    <table id="invoice-preview-table">
-                        <thead>
-                            <tr>
-                                <th>رقم المشترك</th>
-                                <th>خطة الأسعار (Rate Plan)</th>
-                                <th>التكلفة الفعلية فودافون</th>
-                                <th>المشترك في دليل الأفراد</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div id="collection-screen" class="app-screen">
-            <div class="header">
-                <h2>شاشة التحصيل المالي المباشر والسداد الجماعي والجزئي</h2>
-                <p>اختر الشهر المالي لإدارة الحسابات، وتوثيق السداد الجزئي أو الكلي فوراً للعملاء</p>
-            </div>
-
-            <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h3>إدارة تحصيلات وكشوفات الشهر</h3>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <select id="collection-month-select" class="form-control" style="width: 200px;" onchange="loadCollectionData()"></select>
-                        <button class="btn btn-green" onclick="payAllActiveInvoices()"><i class="fa-solid fa-check-double"></i> تحصيل وسداد الجميع بالكامل</button>
-                    </div>
-                </div>
-
-                <!-- حقل البحث للإلغاء - يظهر المسددين عند الكتابة -->
-                <div style="margin-bottom: 12px;">
-                    <div style="position: relative;">
-                        <i class="fa-solid fa-magnifying-glass" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#9ca3af;"></i>
-                        <input type="text" id="collection-search-input"
-                            class="form-control"
-                            placeholder="🔍 ابحث باسم أو رقم... (يعرض المسددين أيضاً لإمكانية إلغاء سدادهم)"
-                            oninput="filterCollectionTable()"
-                            style="padding-right: 36px;">
-                    </div>
-                    <small style="color:#6b7280; font-size:11px; margin-top:4px; display:block;">
-                        <i class="fa-solid fa-circle-info"></i>
-                        اتركه فارغاً لعرض المدينين فقط — اكتب اسماً أو رقماً لعرض المسدد وإلغاء سداده
-                    </small>
-                </div>
-
-                <div class="table-wrapper">
-                    <table id="collection-table">
-                        <thead>
-                            <tr>
-                                <th>رقم الهاتف</th>
-                                <th>اسم المشترك</th>
-                                <th>سعر الباقة المعتمد</th>
-                                <th>فاتورة الإكسيل فعلياً</th>
-                                <th>المبلغ المسدد تراكمياً</th>
-                                <th>الحالة والمتبقي المديوني</th>
-                                <th>تحصيل (كلي / جزئي)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="collection-table-body"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div id="advance-screen" class="app-screen">
-            <div class="header">
-                <h2>منظومة الدفع المقدم والمحافظ الرقمية للأعضاء</h2>
-                <p>إيداع مبالغ مقدماً واستخدامها في السداد والتسويات الذكية التلقائية للديون المعلقة</p>
-            </div>
-
-            <div class="grid-2">
-                <div class="card">
-                    <h3>شحن رصيد وإيداع بمحفظة العميل</h3>
-                    <div class="search-box" style="margin-top:15px; margin-bottom:15px;">
-                        <input type="text" id="advance-search-input" placeholder="أدخل رقم الهاتف المراد الشحن له...">
-                        <button class="btn btn-red" onclick="searchForAdvance()"><i class="fa-solid fa-magnifying-glass"></i> استعلام</button>
-                    </div>
-
-                    <div id="advance-profile-card" style="display:none; background:#fafafa; padding:15px; border-radius:8px; border:1px solid var(--gray-border);">
-                        <h4 id="advance-user-name" style="color:var(--text-color);">اسم المشترك</h4>
-                        <p id="advance-user-phone" style="font-size:13px; color:#666; margin-bottom:10px;">الرقم المالي: </p>
-                        <p style="font-size:14px; font-weight:bold;">الرصيد الحالي بالمحفظة: <span id="current-advance-balance" style="color:var(--green-success);">0.00 ج.م</span></p>
-                        <hr style="margin:15px 0; border:0; border-top:1px solid #eee;">
-                        <div class="form-group">
-                            <label>المبلغ المراد شحنه وإيداعه (ج.م)</label>
-                            <input type="number" id="new-advance-amount" class="form-control" placeholder="أدخل قيمة المبلغ هنا...">
-                        </div>
-                        <button class="btn btn-green" style="width:100%; margin-top:10px;" onclick="saveAdvancePayment()"><i class="fa-solid fa-wallet"></i> حفظ وتأكيد إيداع الرصيد</button>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h3>كشف الحساب التفصيلي للمشترك والسداد التلقائي من المحفظة</h3>
-                    <div class="search-box" style="margin-top:15px; margin-bottom:15px;">
-                        <input type="text" id="statement-search-input" placeholder="ابحث باسم أو رقم العميل لعرض كشف حسابه...">
-                        <button class="btn btn-red" onclick="generateDetailedStatement()"><i class="fa-solid fa-eye"></i> عرض كشف الحساب</button>
-                    </div>
-
-                    <div id="statement-output-area" style="display:none;">
-                        <div style="background:#f4f4f4; padding:15px; border-radius:8px; margin-bottom:15px;" class="grid-2">
-                            <div>
-                                <h4 id="statement-client-name" style="margin-bottom:5px;">اسم المشترك:</h4>
-                                <p id="statement-client-phone" style="font-size:13px; color:#666;">رقم الهاتف:</p>
-                            </div>
-                            <div style="text-align: left;">
-                                <p style="font-size:14px; font-weight:bold;">رصيد محفظة الدفع المقدم: <span id="statement-wallet-balance" style="color:var(--green-success);">0.00 ج.م</span></p>
-                                <button id="statement-settle-btn" class="btn btn-green" style="padding:5px 10px; font-size:12px; margin-top:5px; display:none;" onclick="settleStatementDebtsWithWallet()"><i class="fa-solid fa-wand-magic-sparkles"></i> سداد الديون من المحفظة فوراً</button>
-                            </div>
-                        </div>
-
-                        <div class="grid-3" style="gap:10px; margin-bottom:15px; text-align:center;">
-                            <div style="background:#fff; padding:10px; border:1px solid #ddd; border-radius:6px;"><small style="color:#666;">مطلوب باقات تراكمي</small><br><strong id="statement-total-required">0.00</strong></div>
-                            <div style="background:#fff; padding:10px; border:1px solid #ddd; border-radius:6px;"><small style="color:#666;">إجمالي مسدد</small><br><strong id="statement-total-paid" style="color:var(--green-success);">0.00</strong></div>
-                            <div style="background:#fff; padding:10px; border:1px solid #ddd; border-radius:6px;"><small style="color:#666;">مديونية معلقة</small><br><strong id="statement-total-debt" style="color:var(--primary-color);">0.00</strong></div>
-                        </div>
-
-                        <div style="max-height:180px; overflow-y:auto;">
-                            <table style="width:100%; font-size:13px;" id="statement-table">
-                                <thead>
-                                    <tr>
-                                        <th>الشهر</th>
-                                        <th>النظام</th>
-                                        <th>الباقة</th>
-                                        <th>الفاتورة</th>
-                                        <th>المدفوع</th>
-                                        <th>المتبقي</th>
-                                        <th>حالة الشهر المالي</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="statement-table-body"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="settings-screen" class="app-screen">
-            <div class="header">
-                <h2>دليل الأفراد، أسعار الباقات وإعدادات المنظومة الأساسية</h2>
-                <p>إدارة الحسابات الفردية، استيراد سجل الأفراد الجماعي وتعديل بيانات الاتصال الأساسية</p>
-            </div>
-
-            <div class="grid-3">
-                <div class="card" style="grid-column: span 1;">
-                    <h3>إدراج مشترك جديد يدوياً</h3>
-                    <div class="form-group"><label>اسم العميل / المشترك</label><input type="text" id="new-user-name" class="form-control" placeholder="الاسم ثلاثي..."></div>
-                    <div class="form-group"><label>رقم هاتف فودافون</label><input type="text" id="new-user-phone" class="form-control" placeholder="010XXXXXXXX"></div>
-                    <div class="form-group"><label>سعر الباقة المعتمد (ج.م)</label><input type="number" id="new-user-price" class="form-control" placeholder="0.00"></div>
-                    <div class="form-group"><label>اسم خطة الأسعار (Rate Plan)</label><input type="text" id="new-user-plan" class="form-control" placeholder="Red Business..."></div>
-                    <button class="btn btn-red" style="width:100%; margin-top:10px;" onclick="addNewUserFromSettings()"><i class="fa-solid fa-plus"></i> إضافة العميل للدليل</button>
-                </div>
-
-                <div class="card" style="grid-column: span 2;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h3>دليل المشتركين والباقات المسجلة بالنظام</h3>
-                        <input type="text" id="settings-table-search" class="form-control" placeholder="تصفية وجدول الأفراد..." style="width: 220px;" onkeyup="filterSettingsTable()">
-                    </div>
-                    
-                    <div style="background: #fafafa; padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px dashed #ccc;">
-                        <label style="font-weight: 600; display: block; margin-bottom: 5px;"><i class="fa-solid fa-file-import" style="color:#107c41;"></i> استيراد دليل أفراد جماعي من Excel</label>
-                        <input type="file" id="settings-import-excel" accept=".xlsx, .xls" class="form-control" onchange="handleSettingsImport(event)">
-                    </div>
-
-                    <div style="max-height: 380px; overflow-y: auto;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>اسم المشترك</th>
-                                    <th>رقم الهاتف</th>
-                                    <th>سعر الباقة المثبت</th>
-                                    <th>خطة الأسعار</th>
-                                    <th>إجراءات الحذف والتعديل</th>
-                                </tr>
-                            </thead>
-                            <tbody id="settings-table-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <div class="modal" id="editClientModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>تعديل بيانات الحساب المالي للمشترك</h3>
-                <span class="close-modal" onclick="closeEditModal()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="edit-phone">
-
-                <!-- تلميح الشهر المرتبط (يظهر عند التعديل من شاشة التحصيل فقط) -->
-                <div id="edit-month-hint" style="display:none; background:#eff6ff; border:1px solid #bfdbfe;
-                     border-radius:7px; padding:9px 13px; margin-bottom:14px; font-size:13px; color:#1d4ed8;">
-                </div>
-
-                <div class="form-group">
-                    <label>الاسم</label>
-                    <input type="text" id="edit-name" class="form-control">
-                </div>
-                <div class="form-group">
-                    <label>سعر الباقة المعتمد (ج.م)</label>
-                    <input type="number" id="edit-price" class="form-control" step="0.01">
-                </div>
-                <div class="form-group">
-                    <label>خطة الأسعار (Rate Plan)</label>
-                    <input type="text" id="edit-plan" class="form-control">
-                </div>
-                <button class="btn btn-red" style="width:100%; margin-top:10px;" onclick="saveClientEdits()">
-                    <i class="fa-solid fa-check"></i> حفظ التحديثات والتعديل
-                </button>
-            </div>
-        </div>
-    </div>
-
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Cairo', sans-serif;
+        }
+        :root {
+            --primary-color: #e60000;
+            --dark-bg: #111827;
+            --sidebar-bg: #1f2937;
+            --text-light: #f3f4f6;
+            --gray-border: #e5e7eb;
+            --green-success: #10b981;
+            --orange-warning: #f59e0b;
+        }
+        body {
+            background: #f9fafb;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        /* sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 12px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+        .logo {
+            padding: 24px 20px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            border-bottom: 1px solid #374151;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logo i { color: var(--primary-color); font-size: 1.8rem; }
+        .nav-links {
+            list-style: none;
+            flex: 1;
+            padding: 20px 0;
+        }
+        .nav-links li {
+            padding: 12px 24px;
+            margin: 4px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-weight: 500;
+            color: #d1d5db;
+        }
+        .nav-links li i { width: 24px; font-size: 1.2rem; }
+        .nav-links li.active {
+            background: var(--primary-color);
+            color: white;
+            box-shadow: 0 4px 8px rgba(230,0,0,0.3);
+        }
+        .nav-links li:hover:not(.active) {
+            background: #374151;
+            color: white;
+        }
+        /* main */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 28px;
+        }
+        .app-screen {
+            display: none;
+            animation: fade 0.2s ease;
+        }
+        .active-screen {
+            display: block;
+        }
+        @keyframes fade {
+            from { opacity: 0; transform: translateY(6px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+        .header h2 { font-size: 1.7rem; color: #1f2937; margin-bottom: 6px; }
+        .header p { color: #6b7280; margin-bottom: 24px; border-right: 3px solid var(--primary-color); padding-right: 12px; }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            margin-bottom: 24px;
+            border: 1px solid #f0f2f5;
+        }
+        .grid-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 20px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 6px; color: #374151; font-size: 0.85rem; }
+        .form-control, .search-box input, select {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 14px;
+            border: 1px solid #d1d5db;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+        .form-control:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(230,0,0,0.1); }
+        .btn { padding: 10px 16px; border-radius: 40px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; justify-content: center; font-size: 0.85rem; }
+        .btn-red { background: var(--primary-color); color: white; }
+        .btn-green { background: var(--green-success); color: white; }
+        .btn-outline { background: transparent; border: 1px solid #d1d5db; }
+        .search-box { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .table-wrapper { overflow-x: auto; margin-top: 16px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th, td { padding: 12px 8px; text-align: right; border-bottom: 1px solid #eef2f6; }
+        th { background: #f8fafc; font-weight: 700; color: #1e293b; }
+        .badge-paid { background: #d1fae5; color: #065f46; padding: 4px 10px; border-radius: 40px; font-size: 0.75rem; }
+        .badge-partial { background: #fed7aa; color: #9a3412; }
+        .badge-unpaid { background: #fee2e2; color: #b91c1c; }
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: white; border-radius: 24px; width: 500px; max-width: 90%; padding: 20px; }
+        .close-modal { float: left; font-size: 28px; font-weight: bold; cursor: pointer; }
+        @media (max-width: 800px) { .sidebar { width: 80px; } .sidebar span:not(.logo i) { display: none; } .nav-links li { justify-content: center; } .grid-3, .grid-4, .grid-2 { grid-template-columns: 1fr; } .main-content { padding: 16px; } }
+    </style>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="app.js"></script>
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="logo"><i class="fa-solid fa-droplet"></i><span>Vodafone Billing</span></div>
+    <ul class="nav-links">
+        <li data-target="search-screen" class="active"><i class="fa-solid fa-magnifying-glass"></i><span> الرئيسية للبحث</span></li>
+        <li data-target="invoices-screen"><i class="fa-solid fa-file-invoice-dollar"></i><span> إدارة الفواتير</span></li>
+        <li data-target="collection-screen"><i class="fa-solid fa-money-bill-wave"></i><span> شاشة التحصيل</span></li>
+        <li data-target="advance-screen"><i class="fa-solid fa-wallet"></i><span> الدفع المقدم</span></li>
+        <li data-target="settings-screen"><i class="fa-solid fa-gear"></i><span> دليل الأفراد</span></li>
+        <li data-target="reports-screen"><i class="fa-solid fa-chart-line"></i><span> التقارير المالية</span></li>
+        <li data-target="payments-history-screen"><i class="fa-solid fa-clock-rotate-left"></i><span> سجل الدفعات</span></li>
+        <li data-target="backup-screen"><i class="fa-solid fa-database"></i><span> Backup / Restore</span></li>
+        <li data-target="export-screen"><i class="fa-solid fa-file-excel"></i><span> Export Excel</span></li>
+        <li data-target="settlements-screen"><i class="fa-solid fa-scale-balanced"></i><span> التسويات الشهرية</span></li>
+    </ul>
+</div>
+
+<div class="main-content">
+    <!-- الشاشات الموجودة مسبقاً + الجديدة -->
+    <div id="search-screen" class="app-screen active-screen">...</div>
+    <div id="invoices-screen" class="app-screen">...</div>
+    <div id="collection-screen" class="app-screen">...</div>
+    <div id="advance-screen" class="app-screen">...</div>
+    <div id="settings-screen" class="app-screen">...</div>
+    <div id="reports-screen" class="app-screen"><div class="header"><h2>التقارير المالية المتقدمة</h2><p>إحصائيات وأرباح وتحصيلات كل شهر</p></div><div class="card"><div class="grid-4" id="reports-cards"></div></div><div class="card"><h3>تقارير الشهور</h3><div class="table-wrapper"><table><thead><tr><th>الشهر</th><th>إجمالي الباقات</th><th>إجمالي فواتير فودافون</th><th>التحصيل</th><th>الربح</th></tr></thead><tbody id="monthly-reports-table"></tbody></table></div></div></div>
+    <div id="payments-history-screen" class="app-screen"><div class="header"><h2>سجل الدفعات</h2><p>جميع العمليات المالية والتحصيلات</p></div><div class="card"><div class="search-box"><input type="text" id="payment-history-search" placeholder="ابحث بالاسم أو الرقم" class="form-control" oninput="filterPaymentsHistory()"></div><div class="table-wrapper"><table><thead><tr><th>التاريخ</th><th>الاسم</th><th>الرقم</th><th>الشهر</th><th>المبلغ</th><th>نوع العملية</th></tr></thead><tbody id="payments-history-body"></tbody></table></div></div></div>
+    <div id="backup-screen" class="app-screen"><div class="header"><h2>النسخ الاحتياطي والاستعادة</h2><p>حفظ واسترجاع بيانات المنظومة بالكامل</p></div><div class="grid-2"><div class="card"><h3>إنشاء نسخة احتياطية</h3><p>تحميل جميع البيانات (الأفراد - الفواتير - التحصيل - المحافظ)</p><button class="btn btn-green" onclick="createBackup()"><i class="fa-solid fa-download"></i> تحميل Backup</button></div><div class="card"><h3>استعادة نسخة احتياطية</h3><input type="file" id="restore-file" accept=".json" class="form-control"><button class="btn btn-red" onclick="restoreBackup()" style="margin-top:12px;"><i class="fa-solid fa-upload"></i> استعادة البيانات</button></div></div></div>
+    <div id="export-screen" class="app-screen"><div class="header"><h2>تصدير Excel</h2><p>تصدير بيانات العملاء والفواتير</p></div><div class="card"><div class="form-group"><label>اختر الشهر</label><select id="export-month-select" class="form-control"><option value="">كل الأشهر</option></select></div><button class="btn btn-green" onclick="exportInvoicesExcel()"><i class="fa-solid fa-file-excel"></i> تصدير ملف Excel</button></div></div>
+    <div id="settlements-screen" class="app-screen"><div class="header"><h2>التسويات الشهرية</h2><p>إدارة الإيرادات والمصروفات لكل شهر</p></div><div class="card"><div class="form-group"><label>الشهر</label><input type="month" id="settlement-month" class="form-control"></div><div class="grid-2"><div class="form-group"><label>إيرادات إضافية</label><input type="number" id="settlement-revenue" class="form-control" value="0"></div><div class="form-group"><label>مصروفات إضافية</label><input type="number" id="settlement-expenses" class="form-control" value="0"></div></div><button class="btn btn-green" onclick="saveMonthlySettlement()"><i class="fa-solid fa-floppy-disk"></i> حفظ التسوية</button></div><div class="card"><div class="table-wrapper"><table><thead><tr><th>الشهر</th><th>الإيرادات</th><th>المصروفات</th><th>إجراءات</th></tr></thead><tbody id="settlements-table-body"></tbody></table></div></div></div>
+</div>
+
+<div id="editClientModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>تعديل بيانات المشترك</h3><span class="close-modal" onclick="closeEditModal()">&times;</span></div><div class="modal-body"><input type="hidden" id="edit-phone"><div id="edit-month-hint" style="display:none;"></div><div class="form-group"><label>الاسم</label><input id="edit-name" class="form-control"></div><div class="form-group"><label>سعر الباقة</label><input id="edit-price" type="number" step="0.01" class="form-control"></div><div class="form-group"><label>خطة الأسعار</label><input id="edit-plan" class="form-control"></div><button class="btn btn-red" onclick="saveClientEdits()"> حفظ التعديلات</button></div></div></div>
+
+<script>
+    // Firebase Config (استبدل ببياناتك)
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT.firebaseapp.com",
+        databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+        projectId: "YOUR_PROJECT",
+        storageBucket: "YOUR_PROJECT.appspot.com",
+        messagingSenderId: "000000000000",
+        appId: "1:000000000000:web:xxxx"
+    };
+    let app, database;
+    try {
+        app = firebase.initializeApp(firebaseConfig);
+        database = firebase.database();
+        console.log("Firebase ready");
+    } catch(e) { console.warn(e); alert("يرجى إعداد Firebase config بشكل صحيح"); database = null; }
+
+    // ========== دوال عامة ==========
+    function getUsersRef() { return database.ref('users'); }
+    function getInvoicesRef() { return database.ref('invoices'); }
+    function getAdvanceRef() { return database.ref('advance'); }
+    function getExtraFinancialsRef() { return database.ref('extraFinancials'); }
+    function getPaymentsHistoryRef() { return database.ref('paymentsHistory'); }
+    
+    async function fetchAllUsers() { const snap = await getUsersRef().once('value'); return snap.val() || {}; }
+    async function fetchInvoicesByMonth(month) { const snap = await getInvoicesRef().child(month).once('value'); return snap.val() || {}; }
+
+    // تحديث القوائم المنسدلة للأشهر
+    async function populateMonthDropdowns() {
+        const monthsSet = new Set();
+        const invSnap = await getInvoicesRef().once('value');
+        invSnap.forEach(child => { monthsSet.add(child.key); });
+        const months = Array.from(monthsSet).sort().reverse();
+        const selects = ['collection-month-select', 'delete-invoice-month-select', 'export-month-select'];
+        selects.forEach(id => { const sel = document.getElementById(id); if(sel) { sel.innerHTML = '<option value="">اختر شهر</option>' + months.map(m => `<option value="${m}">${m}</option>`).join(''); } });
+        const invoiceMonth = document.getElementById('invoice-month-select');
+        if(invoiceMonth && months.length) invoiceMonth.value = months[0];
+        const settleMonth = document.getElementById('settlement-month');
+        if(settleMonth && !settleMonth.value) settleMonth.value = new Date().toISOString().slice(0,7);
+    }
+
+    // تحديث التقارير العامة في واجهة البحث
+    async function refreshFinancialReport() {
+        const users = await fetchAllUsers();
+        let totalPackageSum = 0, totalPaidSum = 0, totalActualCost = 0;
+        const invSnap = await getInvoicesRef().once('value');
+        invSnap.forEach(monthSnap => {
+            const invoices = monthSnap.val();
+            for(let phone in invoices){
+                const inv = invoices[phone];
+                totalPackageSum += (inv.amount || 0);
+                totalPaidSum += (inv.paid || 0);
+                totalActualCost += (inv.actualVodafoneCost || 0);
+            }
+        });
+        const extraSnap = await getExtraFinancialsRef().once('value');
+        let extraRevenues=0, extraExpenses=0;
+        extraSnap.forEach(s => { extraRevenues += s.val().revenue || 0; extraExpenses += s.val().expenses || 0; });
+        const netProfit = (totalPaidSum + extraRevenues) - (totalActualCost + extraExpenses);
+        document.getElementById('financial-report-results').innerHTML = `
+            <div class="card"><h4>إجمالي الباقات المولدة</h4><strong style="font-size:1.5rem">${totalPackageSum.toFixed(2)} ج.م</strong></div>
+            <div class="card"><h4>إجمالي تكلفة فودافون</h4><strong style="font-size:1.5rem">${totalActualCost.toFixed(2)} ج.م</strong></div>
+            <div class="card"><h4>إجمالي التحصيل</h4><strong style="color:green">${totalPaidSum.toFixed(2)} ج.م</strong></div>
+            <div class="card"><h4>صافي الربح الكلي</h4><strong style="color:${netProfit>=0?'green':'red'}">${netProfit.toFixed(2)} ج.م</strong></div>
+        `;
+    }
+
+    async function executeGlobalSearch(){ alert("تم تحديث البيانات تلقائياً"); refreshFinancialReport(); }
+    async function saveExtraFinancials(){
+        const manual = parseFloat(document.getElementById('manual-invoice-input').value)||0;
+        const revenue = parseFloat(document.getElementById('additional-revenue-input').value)||0;
+        const expenses = parseFloat(document.getElementById('additional-expenses-input').value)||0;
+        const monthKey = new Date().toISOString().slice(0,7);
+        await getExtraFinancialsRef().child(monthKey).set({ manualInvoice: manual, revenue, expenses });
+        alert("تم حفظ التسوية الإضافية");
+        refreshFinancialReport();
+    }
+    async function generateMonthlyInvoicesFromSettings(){
+        const month = document.getElementById('invoice-month-select').value;
+        if(!month) return alert("اختر الشهر");
+        const users = await fetchAllUsers();
+        const batch = {};
+        for(const phone in users){
+            const user = users[phone];
+            batch[phone] = { name: user.name, phone, amount: user.price || 0, plan: user.planName, paid: 0, actualVodafoneCost: 0, status: "غير مدفوع" };
+        }
+        await getInvoicesRef().child(month).set(batch);
+        alert(`تم توليد فواتير شهر ${month}`);
+        populateMonthDropdowns();
+        if(document.getElementById('collection-screen').style.display !== 'none') loadCollectionData();
+    }
+    let currentExcelData = [];
+    function handleInvoiceImport(event){
+        const file = event.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e){
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet);
+            currentExcelData = rows.map(row => ({ phone: String(row['رقم الهاتف']||row['Phone']||''), cost: parseFloat(row['التكلفة']||row['Cost']||0) }));
+            document.getElementById('invoice-preview-card').style.display = 'block';
+            let html = '';
+            for(let r of currentExcelData) html += `<tr><td>${r.phone}</td><td>${r.cost}</td><td>---</td></tr>`;
+            document.querySelector('#invoice-preview-table tbody').innerHTML = html;
+        };
+        reader.readAsArrayBuffer(file);
+    }
+    async function saveProcessedInvoice(){
+        const monthSelect = document.getElementById('invoice-month-select');
+        const month = monthSelect.value;
+        if(!month || !currentExcelData.length) return alert("ارفع ملف أولاً وحدد الشهر");
+        const invoicesSnap = await getInvoicesRef().child(month).once('value');
+        const updates = {};
+        for(let item of currentExcelData){
+            const phone = item.phone;
+            if(invoicesSnap.child(phone).exists()){
+                updates[`${month}/${phone}/actualVodafoneCost`] = item.cost;
+            }
+        }
+        await getInvoicesRef().update(updates);
+        alert("تم دمج تكاليف فودافون بنجاح");
+        currentExcelData = [];
+        document.getElementById('invoice-preview-card').style.display = 'none';
+    }
+    async function deleteStoredInvoice(){
+        const month = document.getElementById('delete-invoice-month-select').value;
+        if(!month || !confirm(`حذف شهر ${month} بالكامل؟`)) return;
+        await getInvoicesRef().child(month).remove();
+        alert("تم حذف الشهر");
+        populateMonthDropdowns();
+    }
+    async function loadCollectionData(){
+        const month = document.getElementById('collection-month-select').value;
+        if(!month) return;
+        const invoices = await fetchInvoicesByMonth(month);
+        const users = await fetchAllUsers();
+        const tbody = document.getElementById('collection-table-body');
+        tbody.innerHTML = '';
+        for(let phone in invoices){
+            const inv = invoices[phone];
+            const user = users[phone] || { name: phone, price: inv.amount };
+            const debt = (inv.amount || 0) - (inv.paid || 0);
+            const statusClass = debt<=0 ? 'badge-paid' : (inv.paid>0?'badge-partial':'badge-unpaid');
+            const statusText = debt<=0 ? 'مدفوع' : (inv.paid>0?`متبقي ${debt.toFixed(2)}`:'غير مدفوع');
+            tbody.innerHTML += `<tr data-phone="${phone}" data-name="${user.name}">
+                <td>${phone}</td><td>${user.name}</td><td>${(inv.amount||0).toFixed(2)}</td>
+                <td>${(inv.actualVodafoneCost||0).toFixed(2)}</td><td>${(inv.paid||0).toFixed(2)}</td>
+                <td><span class="${statusClass}">${statusText}</span></td>
+                <td><button class="btn btn-green" style="padding:4px 12px;" onclick="openPartialPayment('${month}','${phone}','${user.name}',${inv.amount||0},${inv.paid||0})"><i class="fa-solid fa-hand-holding-dollar"></i> سداد</button></td>
+            </tr>`;
+        }
+        filterCollectionTable();
+    }
+    function filterCollectionTable(){
+        const search = document.getElementById('collection-search-input').value.trim();
+        const rows = document.querySelectorAll('#collection-table-body tr');
+        rows.forEach(row => {
+            const phone = row.getAttribute('data-phone')||'';
+            const name = row.getAttribute('data-name')||'';
+            const matches = search === '' || phone.includes(search) || name.includes(search);
+            row.style.display = matches ? '' : 'none';
+        });
+    }
+    async function payAllActiveInvoices(){
+        const month = document.getElementById('collection-month-select').value;
+        if(!month) return alert("اختر شهراً أولاً");
+        const invoices = await fetchInvoicesByMonth(month);
+        const updates = {};
+        for(let phone in invoices){
+            const inv = invoices[phone];
+            const amountDue = (inv.amount||0) - (inv.paid||0);
+            if(amountDue>0){
+                updates[`${month}/${phone}/paid`] = inv.amount;
+                await addPaymentLog(phone, (await fetchAllUsers())[phone]?.name||phone, month, amountDue, 'تحصيل كلي (دفعة جماعية)');
+            }
+        }
+        await getInvoicesRef().update(updates);
+        alert("تم تسديد جميع الفواتير");
+        loadCollectionData();
+        refreshFinancialReport();
+    }
+    async function addPaymentLog(phone, name, month, amount, type){
+        if(!database) return;
+        const log = { phone, name, month, amount, type, timestamp: Date.now(), date: new Date().toLocaleString('ar-EG') };
+        await getPaymentsHistoryRef().push(log);
+    }
+    async function openPartialPayment(month, phone, name, total, paid){
+        const amount = prompt(`المبلغ المراد تحصيله من ${name} (المتبقي ${(total-paid).toFixed(2)}):`, (total-paid).toFixed(2));
+        if(amount && !isNaN(amount)){
+            const payValue = parseFloat(amount);
+            const newPaid = paid + payValue;
+            await getInvoicesRef().child(`${month}/${phone}/paid`).set(newPaid);
+            await addPaymentLog(phone, name, month, payValue, 'تحصيل جزئي / سداد');
+            loadCollectionData();
+            refreshFinancialReport();
+        }
+    }
+    // شاشة الدفع المقدم
+    async function searchForAdvance(){
+        const phone = document.getElementById('advance-search-input').value.trim();
+        if(!phone) return;
+        const users = await fetchAllUsers();
+        const user = users[phone];
+        if(!user) return alert("المشترك غير موجود");
+        const balanceSnap = await getAdvanceRef().child(phone).once('value');
+        const balance = balanceSnap.val() || 0;
+        document.getElementById('advance-user-name').innerText = user.name;
+        document.getElementById('advance-user-phone').innerText = phone;
+        document.getElementById('current-advance-balance').innerText = balance.toFixed(2) + " ج.م";
+        document.getElementById('advance-profile-card').style.display = 'block';
+        window.currentAdvancePhone = phone;
+    }
+    async function saveAdvancePayment(){
+        const phone = window.currentAdvancePhone;
+        if(!phone) return;
+        const amount = parseFloat(document.getElementById('new-advance-amount').value);
+        if(isNaN(amount) || amount<=0) return alert("أدخل مبلغاً صحيحاً");
+        const oldBalance = (await getAdvanceRef().child(phone).once('value')).val() || 0;
+        await getAdvanceRef().child(phone).set(oldBalance + amount);
+        const users = await fetchAllUsers();
+        await addPaymentLog(phone, users[phone]?.name||phone, '---', amount, 'شحن محفظة (دفع مقدم)');
+        searchForAdvance();
+        alert("تم إيداع الرصيد بنجاح");
+    }
+    async function generateDetailedStatement(){
+        const searchTerm = document.getElementById('statement-search-input').value.trim();
+        if(!searchTerm) return;
+        const users = await fetchAllUsers();
+        let targetPhone = null, targetUser = null;
+        for(let p in users){ if(p === searchTerm || users[p].name.includes(searchTerm)){ targetPhone = p; targetUser = users[p]; break; } }
+        if(!targetPhone) return alert("لم يتم العثور على مشترك");
+        const balance = (await getAdvanceRef().child(targetPhone).once('value')).val() || 0;
+        document.getElementById('statement-client-name').innerText = targetUser.name;
+        document.getElementById('statement-client-phone').innerText = targetPhone;
+        document.getElementById('statement-wallet-balance').innerHTML = balance.toFixed(2) + " ج.م";
+        const allInvoicesSnap = await getInvoicesRef().once('value');
+        let totalRequired=0, totalPaid=0, debt=0;
+        const details = [];
+        allInvoicesSnap.forEach(monthSnap => {
+            const month = monthSnap.key;
+            const inv = monthSnap.val()[targetPhone];
+            if(inv){
+                const required = inv.amount||0;
+                const paid = inv.paid||0;
+                totalRequired += required; totalPaid += paid;
+                const monthDebt = required-paid;
+                debt += monthDebt;
+                details.push({month, amount:required, paid, debt:monthDebt, status: monthDebt<=0?'مدفوع':'مدين', actualCost: inv.actualVodafoneCost});
+            }
+        });
+        document.getElementById('statement-total-required').innerHTML = totalRequired.toFixed(2);
+        document.getElementById('statement-total-paid').innerHTML = totalPaid.toFixed(2);
+        document.getElementById('statement-total-debt').innerHTML = debt.toFixed(2);
+        let rowsHtml = '';
+        for(let d of details){
+            rowsHtml += `<tr><td>${d.month}</td><td>${d.amount.toFixed(2)}</td><td>${d.actualCost?.toFixed(2)||0}</td><td>${d.paid.toFixed(2)}</td><td>${d.debt.toFixed(2)}</td><td>${d.status}</td></tr>`;
+        }
+        document.getElementById('statement-table-body').innerHTML = rowsHtml;
+        document.getElementById('statement-output-area').style.display = 'block';
+        const settleBtn = document.getElementById('statement-settle-btn');
+        settleBtn.style.display = debt>0 && balance>0 ? 'inline-flex' : 'none';
+        settleBtn.onclick = () => settleStatementDebtsWithWallet(targetPhone, targetUser.name, debt, balance);
+    }
+    async function settleStatementDebtsWithWallet(phone, name, totalDebt, walletBalance){
+        if(totalDebt<=0 || walletBalance<=0) return alert("لا توجد ديون أو رصيد كاف");
+        const settleAmount = Math.min(totalDebt, walletBalance);
+        if(!confirm(`سيتم سداد مبلغ ${settleAmount} ج.م من المحفظة لتسديد الديون. هل تريد المتابعة؟`)) return;
+        const newWallet = walletBalance - settleAmount;
+        await getAdvanceRef().child(phone).set(newWallet);
+        const allInvoices = await getInvoicesRef().once('value');
+        let remainingToSettle = settleAmount;
+        for(let monthSnap of Object.values(allInvoices.val()||{})){
+            for(let p in monthSnap){
+                if(p === phone && remainingToSettle>0){
+                    const inv = monthSnap[p];
+                    const oldPaid = inv.paid||0;
+                    const required = inv.amount||0;
+                    const currentDue = required - oldPaid;
+                    if(currentDue>0){
+                        const pay = Math.min(currentDue, remainingToSettle);
+                        const newPaid = oldPaid + pay;
+                        await getInvoicesRef().child(`${monthSnap.key}/${phone}/paid`).set(newPaid);
+                        remainingToSettle -= pay;
+                        await addPaymentLog(phone, name, monthSnap.key, pay, 'سداد تلقائي من المحفظة');
+                    }
+                }
+            }
+        }
+        alert(`تم تسديد ${settleAmount-remainingToSettle} ج.م من المحفظة`);
+        generateDetailedStatement();
+        refreshFinancialReport();
+    }
+    // دليل الأفراد
+    async function renderSettingsTable(){
+        const users = await fetchAllUsers();
+        let html = '';
+        for(let phone in users){
+            const u = users[phone];
+            html += `<tr><td>${u.name}</td><td>${phone}</td><td>${u.price}</td><td>${u.planName||'--'}</td><td><button class="btn btn-outline" onclick="openEditModal('${phone}')">تعديل</button> <button class="btn btn-red" onclick="deleteUser('${phone}')">حذف</button></td></tr>`;
+        }
+        document.getElementById('settings-table-body').innerHTML = html;
+    }
+    async function addNewUserFromSettings(){
+        const name = document.getElementById('new-user-name').value;
+        const phone = document.getElementById('new-user-phone').value;
+        const price = parseFloat(document.getElementById('new-user-price').value);
+        const plan = document.getElementById('new-user-plan').value;
+        if(!name || !phone) return alert("بيانات ناقصة");
+        await getUsersRef().child(phone).set({ name, phone, price, planName: plan });
+        renderSettingsTable();
+        alert("تم إضافة العميل");
+    }
+    async function deleteUser(phone){ if(confirm("حذف؟")){ await getUsersRef().child(phone).remove(); renderSettingsTable(); } }
+    function openEditModal(phone){ window.editPhone = phone; document.getElementById('edit-phone').value = phone; fetchUserDataForEdit(phone); document.getElementById('editClientModal').style.display = 'flex'; }
+    async function fetchUserDataForEdit(phone){ const snap = await getUsersRef().child(phone).once('value'); const u = snap.val(); if(u){ document.getElementById('edit-name').value = u.name; document.getElementById('edit-price').value = u.price; document.getElementById('edit-plan').value = u.planName||''; } }
+    async function saveClientEdits(){ const phone = document.getElementById('edit-phone').value; const name = document.getElementById('edit-name').value; const price = parseFloat(document.getElementById('edit-price').value); const plan = document.getElementById('edit-plan').value; await getUsersRef().child(phone).update({ name, price, planName: plan }); renderSettingsTable(); closeEditModal(); }
+    function closeEditModal(){ document.getElementById('editClientModal').style.display = 'none'; }
+    function handleSettingsImport(event){ const file=event.target.files[0]; if(file){ const reader=new FileReader(); reader.onload=function(e){ const wb=XLSX.read(e.target.result,{type:'binary'}); const ws=wb.Sheets[wb.SheetNames[0]]; const rows=XLSX.utils.sheet_to_json(ws); rows.forEach(async row=>{ const phone=String(row['رقم الهاتف']||row['phone']||''); const name=row['الاسم']||row['name']; const price=parseFloat(row['سعر الباقة']||row['price']||0); const plan=row['الخطة']||''; if(phone && name) await getUsersRef().child(phone).set({name,phone,price,planName:plan}); }); alert("تم الاستيراد"); renderSettingsTable(); }; reader.readAsBinaryString(file); } }
+    function filterSettingsTable(){ const term=document.getElementById('settings-table-search').value; const rows=document.querySelectorAll('#settings-table-body tr'); rows.forEach(r=>{ const text=r.innerText; r.style.display=text.includes(term)?'':'none'; }); }
+    // التقارير المالية المتقدمة
+    async function refreshReports(){
+        const monthsMap = new Map();
+        const invSnap = await getInvoicesRef().once('value');
+        for(let ms of Object.entries(invSnap.val()||{})){
+            let totalPack=0, totalActual=0, totalPaid=0;
+            for(let inv of Object.values(ms[1])){ totalPack+=inv.amount||0; totalActual+=inv.actualVodafoneCost||0; totalPaid+=inv.paid||0; }
+            monthsMap.set(ms[0], {pack:totalPack, actual:totalActual, paid:totalPaid});
+        }
+        const extra = await getExtraFinancialsRef().once('value');
+        let html='';
+        for(let [month,data] of monthsMap.entries()){
+            let extraRev=0, extraExp=0;
+            if(extra.child(month).exists()){ extraRev=extra.child(month).val().revenue||0; extraExp=extra.child(month).val().expenses||0; }
+            const profit = (data.paid+extraRev) - (data.actual+extraExp);
+            html+=`<tr><td>${month}</td><td>${data.pack.toFixed(2)}</td><td>${data.actual.toFixed(2)}</td><td>${data.paid.toFixed(2)}</td><td class="${profit>=0?'green':'red'}">${profit.toFixed(2)}</td></tr>`;
+        }
+        document.getElementById('monthly-reports-table').innerHTML = html;
+        const totalPack=Array.from(monthsMap.values()).reduce((a,b)=>a+b.pack,0);
+        document.getElementById('reports-cards').innerHTML = `<div class="card"><h4>إجمالي الباقات</h4><strong>${totalPack.toFixed(2)} ج.م</strong></div>...`;
+    }
+    // سجل الدفعات
+    async function loadPaymentsHistory(){
+        const snap = await getPaymentsHistoryRef().once('value');
+        let rows = [];
+        snap.forEach(c=>{ rows.push(c.val()); });
+        rows.sort((a,b)=>b.timestamp - a.timestamp);
+        document.getElementById('payments-history-body').innerHTML = rows.map(p => `<tr><td>${p.date||''}</td><td>${p.name||''}</td><td>${p.phone||''}</td><td>${p.month||''}</td><td>${p.amount?.toFixed(2)||0}</td><td>${p.type||''}</td></tr>`).join('');
+    }
+    function filterPaymentsHistory(){ const term=document.getElementById('payment-history-search').value; const rows=document.querySelectorAll('#payments-history-body tr'); rows.forEach(r=>{ r.style.display=r.innerText.includes(term)?'':'none'; }); }
+    // Backup & Restore
+    async function createBackup(){ const data={ users:(await getUsersRef().once('value')).val(), invoices:(await getInvoicesRef().once('value')).val(), advance:(await getAdvanceRef().once('value')).val(), extraFinancials:(await getExtraFinancialsRef().once('value')).val(), paymentsHistory:(await getPaymentsHistoryRef().once('value')).val() }; const blob=new Blob([JSON.stringify(data)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`backup_${new Date().toISOString()}.json`; a.click(); }
+    async function restoreBackup(){ const file=document.getElementById('restore-file').files[0]; if(!file) return; const reader=new FileReader(); reader.onload=async function(e){ const backup=JSON.parse(e.target.result); if(backup.users) await getUsersRef().set(backup.users); if(backup.invoices) await getInvoicesRef().set(backup.invoices); if(backup.advance) await getAdvanceRef().set(backup.advance); if(backup.extraFinancials) await getExtraFinancialsRef().set(backup.extraFinancials); if(backup.paymentsHistory) await getPaymentsHistoryRef().set(backup.paymentsHistory); alert("تمت الاستعادة"); location.reload(); }; reader.readAsText(file); }
+    // Export Excel
+    async function exportInvoicesExcel(){ const month=document.getElementById('export-month-select').value; const users=await fetchAllUsers(); const invoices=await getInvoicesRef().once('value'); let data=[]; if(month && invoices.val()[month]){ for(let [phone,inv] of Object.entries(invoices.val()[month])){ const u=users[phone]||{}; data.push({ الاسم:u.name, الهاتف:phone, سعر_الباقة:inv.amount, التكلفة_الفعلية:inv.actualVodafoneCost, المدفوع:inv.paid, المتبقي:(inv.amount-(inv.paid||0)), الشهر:month }); } } else { invoices.forEach(mSnap=>{ for(let [phone,inv] of Object.entries(mSnap.val())){ const u=users[phone]||{}; data.push({ الاسم:u.name, الهاتف:phone, سعر_الباقة:inv.amount, التكلفة_الفعلية:inv.actualVodafoneCost, المدفوع:inv.paid, المتبقي:(inv.amount-(inv.paid||0)), الشهر:mSnap.key }); } }); } const ws=XLSX.utils.json_to_sheet(data); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"الفواتير"); XLSX.writeFile(wb,`فواتير_${month||'كامل'}.xlsx`); }
+    // التسويات الشهرية
+    async function loadSettlementsTable(){ const snap=await getExtraFinancialsRef().once('value'); let html=''; snap.forEach(s=>{ const val=s.val(); html+=`<tr><td>${s.key}</td><td>${val.revenue||0}</td><td>${val.expenses||0}</td><td><button class="btn-small" onclick="deleteSettlement('${s.key}')">حذف</button></td></tr>`; }); document.getElementById('settlements-table-body').innerHTML=html; }
+    async function saveMonthlySettlement(){ const month=document.getElementById('settlement-month').value; const revenue=parseFloat(document.getElementById('settlement-revenue').value)||0; const expenses=parseFloat(document.getElementById('settlement-expenses').value)||0; await getExtraFinancialsRef().child(month).update({ revenue, expenses }); loadSettlementsTable(); alert("تم حفظ التسوية"); }
+    async function deleteSettlement(month){ await getExtraFinancialsRef().child(month).remove(); loadSettlementsTable(); }
+    // التهيئة العامة وتبديل الشاشات
+    document.querySelectorAll('.nav-links li').forEach(li=>{ li.addEventListener('click',()=>{ document.querySelectorAll('.nav-links li').forEach(l=>l.classList.remove('active')); li.classList.add('active'); document.querySelectorAll('.app-screen').forEach(s=>s.classList.remove('active-screen')); const target=li.getAttribute('data-target'); document.getElementById(target).classList.add('active-screen'); if(target==='collection-screen') loadCollectionData(); if(target==='reports-screen') refreshReports(); if(target==='payments-history-screen') loadPaymentsHistory(); if(target==='settlements-screen') loadSettlementsTable(); if(target==='settings-screen') renderSettingsTable(); if(target==='export-screen') populateMonthDropdowns(); }); });
+    window.onload=async()=>{ await populateMonthDropdowns(); await refreshFinancialReport(); renderSettingsTable(); loadSettlementsTable(); refreshReports(); };
+    window.openPartialPayment=openPartialPayment; window.settleStatementDebtsWithWallet=settleStatementDebtsWithWallet;
+</script>
 </body>
 </html>
