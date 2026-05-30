@@ -8,13 +8,14 @@
 // ==========================================
 
 const firebaseConfig = {
-    apiKey: "AIzaSyBfFRxvmhg8aqtuDgXAOofFGpVPklUF",
+    apiKey: "AIzaSyBfFRxvmhg8aqtuDgXAOofFGpVPklUF-gs",
     authDomain: "mobile-invoic-118d4.firebaseapp.com",
     databaseURL: "https://mobile-invoic-118d4-default-rtdb.firebaseio.com",
     projectId: "mobile-invoic-118d4",
     storageBucket: "mobile-invoic-118d4.firebasestorage.app",
     messagingSenderId: "795305971254",
-    appId: "1:795305971254:web:7e8e874cfd805d33ec1297"
+    appId: "1:795305971254:web:7e8e874cfd805d33ec1297",
+    measurementId: "G-YSV31DFCB4"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -184,7 +185,7 @@ function addNewUser() {
     }
 
     db.ref("settings/" + phone)
-        .set({ name, phone, price, plan })
+        .set({ name, phone, price, ratePlan: plan })
         .then(() => {
             clearClientForm();
             alert("تم إضافة العميل");
@@ -235,7 +236,7 @@ function renderClientsTable() {
             <td>${client.name  || ""}</td>
             <td>${phone}</td>
             <td>${client.price || 0}</td>
-            <td>${client.plan  || ""}</td>
+            <td>${client.ratePlan || ""}</td>
             <td>
                 <button class="btn btn-outline" onclick="editClient('${phone}')">تعديل</button>
                 <button class="btn btn-red"     onclick="deleteClient('${phone}')">حذف</button>
@@ -281,7 +282,7 @@ function editClient(phone) {
     document.getElementById("edit-name").value  = client.name  || "";
     document.getElementById("edit-phone").value = phone;
     document.getElementById("edit-price").value = client.price || 0;
-    document.getElementById("edit-plan").value  = client.plan  || "";
+    document.getElementById("edit-plan").value  = client.ratePlan || "";
 
     document.getElementById("edit-modal").style.display = "flex";
 
@@ -306,12 +307,12 @@ function saveClientEdits() {
     const phone = document.getElementById("edit-phone").value;
     const name  = document.getElementById("edit-name").value.trim();
     const price = parseFloat(document.getElementById("edit-price").value) || 0;
-    const plan  = document.getElementById("edit-plan").value.trim();
+    const plan  = document.getElementById("edit-plan").value.trim(); // ratePlan
 
     if (!name) { alert("أدخل الاسم"); return; }
 
     db.ref("settings/" + phone)
-        .update({ name, price, plan })
+        .update({ name, price, ratePlan: plan })
         .then(() => {
             closeEditModal();
             alert("تم التعديل بنجاح");
@@ -515,7 +516,7 @@ function saveProcessedInvoice() {
         updates[`invoices/${month}/${item.phone}`] = {
             phone:        item.phone,
             name:         item.name  || "",
-            plan:         item.plan  || "",
+            ratePlan:     item.ratePlan  || "",
             packagePrice: item.price,
             paidAmount:   0,
             status:       "غير مدفوع"
@@ -541,27 +542,49 @@ function importClientsFromExcel(input) {
 
     reader.onload = function (e) {
 
-        const workbook = XLSX.read(e.target.result, { type: "binary" });
-        const sheet    = workbook.Sheets[workbook.SheetNames[0]];
-        const rows     = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        try {
+            const workbook = XLSX.read(e.target.result, { type: "binary" });
+            const sheet    = workbook.Sheets[workbook.SheetNames[0]];
+            const rows     = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-        const updates = {};
+            console.log("✅ إجمالي الصفوف في الملف:", rows.length);
+            console.log("🔍 أول صف (هيدر):", rows[0]);
+            console.log("🔍 ثاني صف (أول عميل):", rows[1]);
 
-        // ترتيب أعمدة الملف: A=الرقم | B=الاسم | C=سعر الباقة | D=الخطة
-        rows.slice(1).forEach(row => {
-            if (!row[0]) return;
-            const phone = formatPhone(String(row[0]));
-            updates["settings/" + phone] = {
-                name:  row[1] ? String(row[1]).trim() : "",
-                phone: phone,
-                price: parseFloat(row[2]) || 0,
-                plan:  row[3] ? String(row[3]).trim() : ""
-            };
-        });
+            const updates = {};
 
-        db.ref().update(updates)
-            .then(() => alert("تم استيراد العملاء بنجاح"))
-            .catch(err => alert("خطأ: " + err.message));
+            // ترتيب أعمدة الملف: A=الرقم | B=الاسم | C=سعر الباقة | D=الخطة
+            rows.slice(1).forEach((row, i) => {
+                if (!row[0]) return;
+                const phone = formatPhone(String(row[0]));
+                console.log(`📞 صف ${i+2}: phone=${phone}, name=${row[1]}, price=${row[2]}, plan=${row[3]}`);
+                updates["settings/" + phone] = {
+                    name:  row[1] ? String(row[1]).trim() : "",
+                    phone: phone,
+                    price: parseFloat(row[2]) || 0,
+                    ratePlan: row[3] ? String(row[3]).trim() : ""
+                };
+            });
+
+            const count = Object.keys(updates).length;
+            console.log("📦 عدد العملاء اللي هيتم رفعهم:", count);
+
+            if (count === 0) {
+                alert("الملف فارغ أو مش قادر يقرأ البيانات — شيك الـ Console");
+                return;
+            }
+
+            db.ref().update(updates)
+                .then(() => alert(`✅ تم استيراد ${count} عميل بنجاح`))
+                .catch(err => {
+                    console.error("❌ Firebase error:", err);
+                    alert("خطأ Firebase: " + err.message);
+                });
+
+        } catch(err) {
+            console.error("❌ خطأ في قراءة الملف:", err);
+            alert("خطأ في قراءة الملف: " + err.message);
+        }
 
     };
 
@@ -605,6 +628,7 @@ function loadCollectionScreen() {
         tr.innerHTML = `
             <td>${phone}</td>
             <td>${client.name || "-"}</td>
+            <td>${inv.ratePlan || client.ratePlan || "-"}</td>
             <td>${pkg}</td>
             <td>${paid}</td>
             <td><span class="badge ${badgeClass}">${statusText}</span></td>
@@ -670,47 +694,4 @@ async function collectPayment(month, phone) {
 }
 
 // ==========================================
-// Pay All Active Invoices
-// ==========================================
-
-async function payAllActiveInvoices() {
-
-    const month = document.getElementById("collection-month-select").value;
-    if (!month) { alert("اختر الشهر"); return; }
-
-    const invoices = allInvoices[month] || {};
-    const updates  = {};
-    const histTasks = [];
-
-    Object.keys(invoices).forEach(phone => {
-
-        const inv    = invoices[phone];
-        const pkg    = Number(inv.packagePrice || 0);
-        const paid   = Number(inv.paidAmount   || 0);
-        const remain = pkg - paid;
-
-        if (remain > 0) {
-            updates[`invoices/${month}/${phone}/paidAmount`] = pkg;
-            updates[`invoices/${month}/${phone}/status`]     = "مدفوع بالكامل";
-            histTasks.push(savePaymentHistory(phone, month, remain, "تحصيل جماعي"));
-        }
-
-    });
-
-    if (Object.keys(updates).length === 0) {
-        alert("جميع الفواتير مسددة");
-        return;
-    }
-
-    try {
-        await db.ref().update(updates);
-        await Promise.all(histTasks);
-        alert("تم تحصيل جميع الفواتير");
-        loadCollectionScreen();
-    } catch (err) {
-        alert("خطأ: " + err.message);
-    }
-
-}
-
-// ==============
+// Pay All Active Inv
