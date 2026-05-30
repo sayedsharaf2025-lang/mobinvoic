@@ -40,6 +40,28 @@ document.addEventListener("DOMContentLoaded", () => {
     initializeDarkMode();
     loadAllData();
 
+    // ربط ملف الفواتير
+    const fileInput = document.getElementById("invoice-file-input");
+    if (fileInput) {
+        fileInput.addEventListener("change", function () {
+            previewInvoiceFile(this);
+        });
+    }
+
+    // ربط ملف العملاء
+    const settingsFile = document.getElementById("settings-file-input");
+    if (settingsFile) {
+        settingsFile.addEventListener("change", function () {
+            importClientsFromExcel(this);
+        });
+    }
+
+    // ربط select التحصيل
+    const collectionSel = document.getElementById("collection-month-select");
+    if (collectionSel) {
+        collectionSel.addEventListener("change", loadCollectionScreen);
+    }
+
 });
 
 // ==========================================
@@ -106,22 +128,25 @@ function loadAllData() {
         allClients = snapshot.val() || {};
         renderClientsTable();
         updateDashboard();
-    });
+    }, err => console.error("❌ settings:", err));
 
     db.ref("invoices").on("value", snapshot => {
         allInvoices = snapshot.val() || {};
         updateDashboard();
-    });
+        // تحديث شاشة التحصيل لو مفتوحة
+        const activeCol = document.querySelector("#collection-screen.active-screen");
+        if (activeCol) loadCollectionScreen();
+    }, err => console.error("❌ invoices:", err));
 
     db.ref("wallets").on("value", snapshot => {
         allWallets = snapshot.val() || {};
         updateDashboard();
-    });
+    }, err => console.error("❌ wallets:", err));
 
     db.ref("payments").on("value", snapshot => {
         allPayments = snapshot.val() || {};
         updateDashboard();
-    });
+    }, err => console.error("❌ payments:", err));
 
 }
 
@@ -421,24 +446,6 @@ function populateInvoiceMonths() {
 // ==========================================
 // Invoice Import (XLSX)
 // ==========================================
-
-document.addEventListener("DOMContentLoaded", () => {
-
-    const fileInput = document.getElementById("invoice-file-input");
-    if (fileInput) {
-        fileInput.addEventListener("change", function () {
-            previewInvoiceFile(this);
-        });
-    }
-
-    const settingsFile = document.getElementById("settings-file-input");
-    if (settingsFile) {
-        settingsFile.addEventListener("change", function () {
-            importClientsFromExcel(this);
-        });
-    }
-
-});
 
 let parsedInvoiceData = [];
 
